@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SIUCE — Sistema Disciplinario</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+          --navy: #0f1f35;
+          --navy-mid: #162844;
+          --navy-light: #1e3a5f;
+          --navy-border: #243d5e;
+          --accent: #2f80ed;
+          --accent-dim: #1a4a8a;
+          --cream: #f4f1eb;
+          --cream-dark: #e8e3d8;
+          --text-main: #f0ece4;
+          --text-muted: #8fa4be;
+          --text-dim: #5a7494;
+          --tipo1: #22c55e;
+          --tipo1-bg: #052e16;
+          --tipo1-border: #166534;
+          --tipo2: #f59e0b;
+          --tipo2-bg: #1c1000;
+          --tipo2-border: #92400e;
+          --tipo3: #ef4444;
+          --tipo3-bg: #1f0000;
+          --tipo3-border: #991b1b;
+          --pending: #60a5fa;
+          --signed: #4ade80;
+          --sidebar-w: 240px;
+          --header-h: 62px;
+          --radius: 10px;
+          --radius-sm: 6px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          font-family: 'DM Sans', sans-serif;
+          background: var(--navy);
+          color: var(--text-main);
+          min-height: 100vh;
+          display: flex;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        /* ── SIDEBAR ── */
+        #sidebar {
+          width: var(--sidebar-w);
+          min-height: 100vh;
+          background: var(--navy-mid);
+          border-right: 1px solid var(--navy-border);
+          display: flex;
+          flex-direction: column;
+          position: fixed;
+          top: 0; left: 0;
+          z-index: 100;
+        }
+
+        .sidebar-logo {
+          padding: 20px 20px 16px;
+          border-bottom: 1px solid var(--navy-border);
+        }
+        .sidebar-logo .logo-mark {
+          font-family: 'Lora', serif;
+          font-size: 20px;
+          font-weight: 600;
+          color: var(--text-main);
+          letter-spacing: -0.3px;
+        }
+        .sidebar-logo .logo-sub {
+          font-size: 10px;
+          color: var(--text-dim);
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          margin-top: 2px;
+        }
+
+        .sidebar-nav {
+          padding: 12px 0;
+          flex: 1;
+        }
+        .nav-section-label {
+          font-size: 10px;
+          letter-spacing: 1.4px;
+          text-transform: uppercase;
+          color: var(--text-dim);
+          padding: 12px 20px 6px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 20px;
+          cursor: pointer;
+          color: var(--text-muted);
+          font-size: 13.5px;
+          font-weight: 400;
+          border-left: 3px solid transparent;
+          transition: all 0.15s;
+          text-decoration: none;
+        }
+        .nav-item:hover { color: var(--text-main); background: rgba(255,255,255,0.04); }
+        .nav-item.active {
+          color: var(--text-main);
+          background: rgba(47,128,237,0.1);
+          border-left-color: var(--accent);
+          font-weight: 500;
+        }
+        .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+        .sidebar-footer {
+          padding: 14px 20px;
+          border-top: 1px solid var(--navy-border);
+          font-size: 11px;
+          color: var(--text-dim);
+          line-height: 1.6;
+        }
+
+        /* ── MAIN LAYOUT ── */
+        #main {
+          margin-left: var(--sidebar-w);
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+        }
+
+        #header {
+          height: var(--header-h);
+          background: var(--navy-mid);
+          border-bottom: 1px solid var(--navy-border);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 28px;
+          position: sticky;
+          top: 0;
+          z-index: 90;
+        }
+        .header-title {
+          font-family: 'Lora', serif;
+          font-size: 15px;
+          font-weight: 500;
+          color: var(--text-main);
+        }
+        .header-breadcrumb {
+          font-size: 12px;
+          color: var(--text-dim);
+          margin-top: 1px;
+        }
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+
+        /* ── CONTENT ── */
+        #content { padding: 28px; flex: 1; animation: fadein 0.2s ease; }
+        @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+        /* ── BUTTONS ── */
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          border-radius: var(--radius-sm);
+          font-size: 13px;
+          font-weight: 500;
+          font-family: 'DM Sans', sans-serif;
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: all 0.15s;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-primary:hover { background: #1a6ed4; }
+        .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--navy-border); }
+        .btn-ghost:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+        .btn-danger { background: transparent; color: var(--tipo3); border-color: var(--tipo3-border); }
+        .btn-danger:hover { background: rgba(239,68,68,0.1); }
+        .btn-success { background: transparent; color: var(--tipo1); border-color: var(--tipo1-border); }
+        .btn-success:hover { background: rgba(34,197,94,0.1); }
+        .btn-sm { padding: 5px 11px; font-size: 12px; }
+        .btn-icon { padding: 7px; min-width: 32px; justify-content: center; }
+
+        /* ── CARDS ── */
+        .card {
+          background: var(--navy-mid);
+          border: 1px solid var(--navy-border);
+          border-radius: var(--radius);
+          padding: 20px 24px;
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .card-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; color: var(--text-main); }
+
+        /* ── STAT CARDS ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card {
+          background: var(--navy-mid);
+          border: 1px solid var(--navy-border);
+          border-radius: var(--radius);
+          padding: 18px 20px;
+          position: relative;
+          overflow: hidden;
+        }
+        .stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0;
+          width: 3px; height: 100%;
+          background: var(--accent);
+        }
+        .stat-card.t1::before { background: var(--tipo1); }
+        .stat-card.t2::before { background: var(--tipo2); }
+        .stat-card.t3::before { background: var(--tipo3); }
+        .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 8px; }
+        .stat-value { font-family: 'Lora', serif; font-size: 32px; font-weight: 600; color: var(--text-main); line-height: 1; }
+        .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+        /* ── BADGES ── */
+        .badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 9px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 500;
+          border: 1px solid;
+        }
+        .badge-t1 { background: var(--tipo1-bg); color: var(--tipo1); border-color: var(--tipo1-border); }
+        .badge-t2 { background: var(--tipo2-bg); color: var(--tipo2); border-color: var(--tipo2-border); }
+        .badge-t3 { background: var(--tipo3-bg); color: var(--tipo3); border-color: var(--tipo3-border); }
+        .badge-pending { background: rgba(96,165,250,0.1); color: var(--pending); border-color: rgba(96,165,250,0.3); }
+        .badge-signed { background: rgba(74,222,128,0.1); color: var(--signed); border-color: rgba(74,222,128,0.3); }
+        .badge-victima { background: rgba(239,68,68,0.1); color: #fca5a5; border-color: rgba(239,68,68,0.25); }
+        .badge-agresor { background: rgba(245,158,11,0.1); color: #fcd34d; border-color: rgba(245,158,11,0.25); }
+        .badge-testigo { background: rgba(148,163,184,0.1); color: #cbd5e1; border-color: rgba(148,163,184,0.25); }
+
+        /* ── TABLE ── */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+          text-align: left;
+          padding: 10px 14px;
+          font-size: 10.5px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: var(--text-dim);
+          border-bottom: 1px solid var(--navy-border);
+          font-weight: 500;
+          white-space: nowrap;
+        }
+        tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s; }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        tbody td { padding: 11px 14px; color: var(--text-muted); vertical-align: middle; }
+        tbody td:first-child { color: var(--text-main); }
+        .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        /* ── FORMS ── */
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.3px; }
+        .form-control {
+          width: 100%;
+          background: var(--navy);
+          border: 1px solid var(--navy-border);
+          border-radius: var(--radius-sm);
+          padding: 9px 12px;
+          color: var(--text-main);
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13.5px;
+          transition: border-color 0.15s;
+          outline: none;
+        }
+        .form-control:focus { border-color: var(--accent); }
+        .form-control::placeholder { color: var(--text-dim); }
+        textarea.form-control { resize: vertical; min-height: 100px; }
+        select.form-control option { background: var(--navy-mid); }
+
+        .tipo-preview {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: var(--radius-sm);
+          font-size: 12px;
+          margin-top: 8px;
+          border: 1px dashed var(--navy-border);
+          color: var(--text-muted);
+        }
+
+        /* ── MODAL ── */
+        .modal-backdrop {
+          display: none;
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,0.65);
+          z-index: 200;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal {
+          background: var(--navy-mid);
+          border: 1px solid var(--navy-border);
+          border-radius: var(--radius);
+          width: 100%;
+          max-width: 560px;
+          max-height: 90vh;
+          overflow-y: auto;
+          animation: modalin 0.2s ease;
+        }
+        @keyframes modalin { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 18px 24px;
+          border-bottom: 1px solid var(--navy-border);
+        }
+        .modal-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 500; }
+        .modal-body { padding: 24px; }
+        .modal-footer {
+          padding: 16px 24px;
+          border-top: 1px solid var(--navy-border);
+          display: flex; justify-content: flex-end; gap: 10px;
+        }
+        .btn-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; line-height: 1; padding: 2px; }
+        .btn-close:hover { color: var(--text-main); }
+
+        /* ── DETAIL VIEW ── */
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .detail-section { margin-bottom: 24px; }
+        .detail-section-title {
+          font-size: 10.5px;
+          text-transform: uppercase;
+          letter-spacing: 1.2px;
+          color: var(--text-dim);
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid var(--navy-border);
+        }
+        .detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 16px; }
+        .detail-key { font-size: 12px; color: var(--text-dim); min-width: 120px; }
+        .detail-val { font-size: 13px; color: var(--text-main); text-align: right; flex: 1; }
+
+        /* ── SIUCE FORMAT ── */
+        .siuce-doc {
+          background: #fff;
+          color: #1a1a1a;
+          border-radius: var(--radius);
+          padding: 40px 48px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px;
+          line-height: 1.7;
+          max-width: 720px;
+          margin: 0 auto;
+        }
+        .siuce-header { text-align: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid #0f1f35; }
+        .siuce-header h1 { font-family: 'Lora', serif; font-size: 18px; color: #0f1f35; margin-bottom: 4px; }
+        .siuce-header p { font-size: 11px; color: #555; letter-spacing: 0.5px; }
+        .siuce-section { margin-bottom: 20px; }
+        .siuce-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #0f1f35; font-weight: 600; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+        .siuce-row { display: flex; gap: 12px; margin-bottom: 6px; }
+        .siuce-key { min-width: 140px; color: #555; font-size: 12px; }
+        .siuce-val { color: #111; font-size: 12px; }
+        .siuce-person { background: #f5f5f5; border-radius: 4px; padding: 8px 12px; margin-bottom: 6px; }
+        .siuce-firma { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; display: flex; justify-content: flex-end; }
+        .siuce-firma-box { text-align: center; }
+        .siuce-firma-line { width: 200px; border-top: 1px solid #333; padding-top: 6px; font-size: 11px; color: #333; }
+
+        /* ── ALERT ── */
+        .alert {
+          padding: 11px 16px;
+          border-radius: var(--radius-sm);
+          border: 1px solid;
+          font-size: 13px;
+          margin-bottom: 16px;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        .alert-warning { background: rgba(245,158,11,0.08); border-color: var(--tipo2-border); color: var(--tipo2); }
+        .alert-danger { background: rgba(239,68,68,0.08); border-color: var(--tipo3-border); color: #fca5a5; }
+        .alert-info { background: rgba(47,128,237,0.08); border-color: rgba(47,128,237,0.3); color: var(--pending); }
+        .alert-success { background: rgba(34,197,94,0.08); border-color: var(--tipo1-border); color: var(--tipo1); }
+
+        /* ── TOAST ── */
+        #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+        .toast {
+          padding: 12px 18px;
+          border-radius: var(--radius-sm);
+          font-size: 13px;
+          font-weight: 500;
+          border: 1px solid;
+          animation: toastIn 0.2s ease, toastOut 0.3s ease 2.7s forwards;
+          max-width: 320px;
+        }
+        .toast-ok { background: #052e16; border-color: var(--tipo1-border); color: var(--tipo1); }
+        .toast-err { background: var(--tipo3-bg); border-color: var(--tipo3-border); color: #fca5a5; }
+        .toast-info { background: rgba(47,128,237,0.12); border-color: rgba(47,128,237,0.3); color: var(--pending); }
+        @keyframes toastIn { from { transform: translateX(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+        @keyframes toastOut { to { transform: translateX(20px); opacity: 0; } }
+
+        /* ── MISC ── */
+        .divider { border: none; border-top: 1px solid var(--navy-border); margin: 20px 0; }
+        .empty-state { text-align: center; padding: 48px 20px; color: var(--text-dim); }
+        .empty-icon { font-size: 36px; margin-bottom: 10px; }
+        .empty-text { font-size: 13px; }
+        .row { display: flex; gap: 16px; }
+        .row > * { flex: 1; }
+        .mt-16 { margin-top: 16px; }
+        .mb-16 { margin-bottom: 16px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .chart-wrap { position: relative; height: 200px; }
+        .loader { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── ACUDIENTES MINI PANEL ── */
+        .acudiente-mini {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px;
+          border: 1px solid var(--navy-border);
+          border-radius: var(--radius-sm);
+          margin-bottom: 8px;
+          background: rgba(255,255,255,0.02);
+          transition: background 0.1s;
+        }
+        .acudiente-mini:hover { background: rgba(255,255,255,0.04); }
+        .acudiente-info .name { font-size: 13px; color: var(--text-main); font-weight: 500; }
+        .acudiente-info .contact { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+        .notif-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .notif-dot.yes { background: var(--tipo1); }
+        .notif-dot.no { background: var(--text-dim); }
+
+        .page { display: none; }
+        .page.active { display: block; }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-mark">⚖ SIUCE</div>
+        <div class="logo-sub">Sistema Disciplinario · Ley 1620</div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Principal</div>
+        <a class="nav-item active" onclick="navigate('dashboard')" href="#">
+            <span class="nav-icon">▦</span> Dashboard
+        </a>
+        <a class="nav-item" onclick="navigate('reportes')" href="#">
+            <span class="nav-icon">☰</span> Reportes
+        </a>
+        <div class="nav-section-label" style="margin-top:8px;">Gestión</div>
+        <a class="nav-item" onclick="navigate('acudientes')" href="#">
+            <span class="nav-icon">◎</span> Acudientes
+        </a>
+        <a class="nav-item" onclick="navigate('catalogo')" href="#">
+            <span class="nav-icon">◈</span> Catálogo
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        Institución Educativa San José<br/>
+        <span style="color:var(--texto-dim)">NIT 890123456-1</span>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+    <header id="header">
+        <div>
+            <div class="header-title" id="headerTitle">Dashboard</div>
+            <div class="header-breadcrumb" id="headerBreadcrumb">Resumen general del sistema disciplinario</div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openCrearReporte()">＋ Nuevo Reporte</button>
+        </div>
+    </header>
+
+    <div id="content">
+
+        <!-- ─── DASHBOARD ─── -->
+        <div id="page-dashboard" class="page active">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card"><div class="stat-label">Total Reportes</div><div class="stat-value" id="statTotal">—</div><div class="stat-sub">Registrados en el sistema</div></div>
+                <div class="stat-card t1"><div class="stat-label">Tipo I · Leve</div><div class="stat-value" id="statT1">—</div><div class="stat-sub">Comportamiento aislado</div></div>
+                <div class="stat-card t2"><div class="stat-label">Tipo II · Moderado</div><div class="stat-value" id="statT2">—</div><div class="stat-sub">Acoso o intimidación</div></div>
+                <div class="stat-card t3"><div class="stat-label">Tipo III · Grave</div><div class="stat-value" id="statT3">—</div><div class="stat-sub">Requiere firma y SIUCE</div></div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Reportes por tipo</span></div>
+                    <div class="chart-wrap"><canvas id="chartTipo"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Faltas por grado</span></div>
+                    <div class="chart-wrap"><canvas id="chartGrado"></canvas></div>
+                </div>
+            </div>
+            <div class="card mt-16">
+                <div class="card-header">
+                    <span class="card-title">Reportes recientes</span>
+                    <button class="btn btn-ghost btn-sm" onclick="navigate('reportes')">Ver todos →</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>
+                            <th>ID</th><th>Fecha</th><th>Lugar</th><th>Tipo</th><th>Estado</th><th></th>
+                        </tr></thead>
+                        <tbody id="recentTable"><tr><td colspan="6"><div class="empty-state"><div class="loader"></div></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── REPORTES ─── -->
+        <div id="page-reportes" class="page">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Todos los reportes</span>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <select class="form-control" style="width:140px;padding:7px 10px;" onchange="filtrarReportes(this.value,'tipo')" id="filtroTipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="TIPO_I">Tipo I</option>
+                            <option value="TIPO_II">Tipo II</option>
+                            <option value="TIPO_III">Tipo III</option>
+                        </select>
+                        <select class="form-control" style="width:140px;padding:7px 10px;" onchange="filtrarReportes(this.value,'estado')" id="filtroEstado">
+                            <option value="">Todos los estados</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="FIRMADO">Firmado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>
+                            <th>#</th><th>Fecha / Hora</th><th>Lugar</th><th>Tipo de Falta</th><th>Estado</th><th>Firmado por</th><th>Acciones</th>
+                        </tr></thead>
+                        <tbody id="reportesTable"><tr><td colspan="7"><div class="empty-state"><div class="loader"></div></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── DETALLE REPORTE ─── -->
+        <div id="page-detalle" class="page">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+                <button class="btn btn-ghost btn-sm" onclick="navigate('reportes')">← Volver</button>
+                <span style="color:var(--text-dim);font-size:13px;">Detalle del reporte</span>
+            </div>
+            <div id="detalleContent">
+                <div class="empty-state"><div class="loader"></div></div>
+            </div>
+        </div>
+
+        <!-- ─── ACUDIENTES ─── -->
+        <div id="page-acudientes" class="page">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Acudientes registrados</span>
+                        <button class="btn btn-primary btn-sm" onclick="openModalAcudiente()">＋ Agregar</button>
+                    </div>
+                    <div id="acudientesList">
+                        <div class="empty-state"><div class="loader"></div></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Agregar acudiente</span></div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre completo</label>
+                        <input class="form-control" id="acu_nombre" placeholder="Nombre del acudiente"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input class="form-control" id="acu_tel" placeholder="300 000 0000"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Correo electrónico</label>
+                        <input class="form-control" id="acu_email" placeholder="correo@ejemplo.com"/>
+                    </div>
+                    <button class="btn btn-primary" onclick="crearAcudiente()">Guardar acudiente</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── CATÁLOGO ─── -->
+        <div id="page-catalogo" class="page">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Entidades de Salud (EPS)</span></div>
+                    <div id="epsList"><div class="empty-state"><div class="loader"></div></div></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Estaciones de Policía</span></div>
+                    <div id="policiaList"><div class="empty-state"><div class="loader"></div></div></div>
+                </div>
+            </div>
+            <div class="card mt-16">
+                <div class="card-header"><span class="card-title">Colegios registrados</span></div>
+                <div id="colegiosList"><div class="empty-state"><div class="loader"></div></div></div>
+            </div>
+        </div>
+
+    </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════════════ MODALS ═══════════════════════════════════════ -->
+
+<!-- Modal crear / editar reporte -->
+<div class="modal-backdrop" id="modalReporte">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" id="modalReporteTitulo">Nuevo reporte disciplinario</span>
+            <button class="btn-close" onclick="closeModal('modalReporte')">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="rpt_id"/>
+            <div class="form-group">
+                <label class="form-label">Lugar del incidente *</label>
+                <input class="form-control" id="rpt_lugar" placeholder="Ej: Patio de recreo, Salón 5B"/>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descripción del hecho *</label>
+                <textarea class="form-control" id="rpt_desc" rows="5" placeholder="Describe detalladamente lo ocurrido…" oninput="previewTipo()"></textarea>
+                <div class="tipo-preview" id="tipoPreview" style="display:none"></div>
+            </div>
+            <div class="alert alert-info" style="font-size:12px;margin-bottom:0;">
+                <span>ℹ</span>
+                <span>El tipo de falta es clasificado automáticamente por el sistema según las palabras clave del hecho.</span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalReporte')">Cancelar</button>
+            <button class="btn btn-primary" onclick="guardarReporte()">Guardar reporte</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal agregar implicado -->
+<div class="modal-backdrop" id="modalImplicado">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title">Agregar implicado</span>
+            <button class="btn-close" onclick="closeModal('modalImplicado')">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="imp_reporteId"/>
+            <div class="row">
+                <div class="form-group">
+                    <label class="form-label">Nombre completo *</label>
+                    <input class="form-control" id="imp_nombre" placeholder="Nombre del estudiante"/>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rol *</label>
+                    <select class="form-control" id="imp_rol">
+                        <option value="">— Seleccionar —</option>
+                        <option value="VICTIMA">Víctima</option>
+                        <option value="AGRESOR">Agresor</option>
+                        <option value="TESTIGO">Testigo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="form-label">Tipo documento</label>
+                    <select class="form-control" id="imp_tipoDoc">
+                        <option value="TI">Tarjeta de Identidad</option>
+                        <option value="CC">Cédula de Ciudadanía</option>
+                        <option value="CE">Cédula Extranjería</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">N° documento</label>
+                    <input class="form-control" id="imp_numDoc" placeholder="Número"/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="form-label">Grado</label>
+                    <input class="form-control" id="imp_grado" placeholder="Ej: 9A, 10B"/>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Colegio</label>
+                    <select class="form-control" id="imp_colegio"></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Acudiente (opcional)</label>
+                <select class="form-control" id="imp_acudiente">
+                    <option value="">— Sin acudiente asignado —</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalImplicado')">Cancelar</button>
+            <button class="btn btn-primary" onclick="guardarImplicado()">Agregar implicado</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal SIUCE -->
+<div class="modal-backdrop" id="modalSiuce">
+    <div class="modal" style="max-width:720px;">
+        <div class="modal-header">
+            <span class="modal-title">Formato SIUCE — Reporte oficial</span>
+            <button class="btn-close" onclick="closeModal('modalSiuce')">✕</button>
+        </div>
+        <div class="modal-body" id="siuceBody">
+            <div class="empty-state"><div class="loader"></div></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modalSiuce')">Cerrar</button>
+            <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+    // ════════════════════════════════════════
+    // CONFIG
+    // ════════════════════════════════════════
+    const API = 'http://localhost:8080';
+
+    // ════════════════════════════════════════
+    // STATE
+    // ════════════════════════════════════════
+    let allReportes = [];
+    let currentPage = 'dashboard';
+    let chartTipo = null;
+    let chartGrado = null;
+
+    // ════════════════════════════════════════
+    // TOAST
+    // ════════════════════════════════════════
+    function toast(msg, type='ok') {
+      const el = document.createElement('div');
+      el.className = `toast toast-${type}`;
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+
+    // ════════════════════════════════════════
+    // API HELPERS
+    // ════════════════════════════════════════
+    async function apiFetch(path, opts={}) {
+      try {
+        const res = await fetch(API + path, {
+          headers: { 'Content-Type': 'application/json' },
+          ...opts
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `Error ${res.status}`);
+        }
+        return res.status === 204 ? null : res.json();
+      } catch(e) {
+        toast(e.message, 'err');
+        throw e;
+      }
+    }
+
+    // ════════════════════════════════════════
+    // NAVIGATION
+    // ════════════════════════════════════════
+    const pageMeta = {
+      dashboard:   { title: 'Dashboard',    sub: 'Resumen general del sistema disciplinario' },
+      reportes:    { title: 'Reportes',     sub: 'Listado y gestión de reportes disciplinarios' },
+      detalle:     { title: 'Detalle',      sub: 'Información completa del reporte' },
+      acudientes:  { title: 'Acudientes',   sub: 'Padres y tutores registrados' },
+      catalogo:    { title: 'Catálogo',     sub: 'EPS, Policía y Colegios disponibles' },
+    };
+
+    function navigate(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+      const nav = document.querySelector(`.nav-item[onclick*="${page}"]`);
+      if (nav) nav.classList.add('active');
+      document.getElementById('headerTitle').textContent = pageMeta[page]?.title || page;
+      document.getElementById('headerBreadcrumb').textContent = pageMeta[page]?.sub || '';
+      currentPage = page;
+      if (page === 'dashboard') loadDashboard();
+      if (page === 'reportes') loadReportes();
+      if (page === 'acudientes') loadAcudientes();
+      if (page === 'catalogo') loadCatalogo();
+    }
+
+    // ════════════════════════════════════════
+    // BADGES & HELPERS
+    // ════════════════════════════════════════
+    function tipoBadge(tipo) {
+      const map = {
+        TIPO_I: ['badge-t1', 'Tipo I · Leve'],
+        TIPO_II: ['badge-t2', 'Tipo II · Moderado'],
+        TIPO_III: ['badge-t3', 'Tipo III · Grave'],
+      };
+      const [cls, label] = map[tipo] || ['badge-t1', tipo];
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
+    function estadoBadge(estado) {
+      return estado === 'FIRMADO'
+        ? `<span class="badge badge-signed">✓ Firmado</span>`
+        : `<span class="badge badge-pending">○ Pendiente</span>`;
+    }
+    function rolBadge(rol) {
+      const map = { VICTIMA:'badge-victima', AGRESOR:'badge-agresor', TESTIGO:'badge-testigo' };
+      return `<span class="badge ${map[rol]||''}">${rol}</span>`;
+    }
+    function fmtFecha(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' })
+        + ' ' + d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
+    }
+
+    // ════════════════════════════════════════
+    // DASHBOARD
+    // ════════════════════════════════════════
+    async function loadDashboard() {
+      try {
+        const stats = await apiFetch('/api/reportes/estadisticas');
+        document.getElementById('statTotal').textContent = stats.totalReportes ?? 0;
+        document.getElementById('statT1').textContent = stats.porTipo?.TIPO_I ?? 0;
+        document.getElementById('statT2').textContent = stats.porTipo?.TIPO_II ?? 0;
+        document.getElementById('statT3').textContent = stats.porTipo?.TIPO_III ?? 0;
+        renderChartTipo(stats.porTipo || {});
+        renderChartGrado(stats.porGrado || {});
+      } catch(e) {}
+
+      try {
+        const reportes = await apiFetch('/api/reportes');
+        allReportes = reportes;
+        const recents = [...reportes].reverse().slice(0, 5);
+        const tb = document.getElementById('recentTable');
+        if (!recents.length) { tb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Sin reportes aún</div></div></td></tr>`; return; }
+        tb.innerHTML = recents.map(r => `
+          <tr>
+            <td><code style="color:var(--accent);font-size:12px;">#${r.id}</code></td>
+            <td>${fmtFecha(r.fechaHora)}</td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.lugar}</td>
+            <td>${tipoBadge(r.tipoFalta)}</td>
+            <td>${estadoBadge(r.estado)}</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="verDetalle(${r.id})">Ver →</button></td>
+          </tr>`).join('');
+      } catch(e) {}
+    }
+
+    function renderChartTipo(data) {
+      if (chartTipo) chartTipo.destroy();
+      const ctx = document.getElementById('chartTipo').getContext('2d');
+      chartTipo = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Tipo I', 'Tipo II', 'Tipo III'],
+          datasets: [{
+            data: [data.TIPO_I||0, data.TIPO_II||0, data.TIPO_III||0],
+            backgroundColor: ['rgba(34,197,94,0.25)', 'rgba(245,158,11,0.25)', 'rgba(239,68,68,0.25)'],
+            borderColor: ['#22c55e', '#f59e0b', '#ef4444'],
+            borderWidth: 1.5,
+            borderRadius: 5,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8fa4be', font: { size: 11 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8fa4be', font: { size: 11 }, stepSize: 1 } }
+          }
+        }
+      });
+    }
+
+    function renderChartGrado(data) {
+      if (chartGrado) chartGrado.destroy();
+      const labels = Object.keys(data);
+      const values = Object.values(data);
+      if (!labels.length) return;
+      const ctx = document.getElementById('chartGrado').getContext('2d');
+      chartGrado = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: ['rgba(47,128,237,0.35)','rgba(245,158,11,0.35)','rgba(34,197,94,0.35)','rgba(239,68,68,0.35)','rgba(148,163,184,0.35)'],
+            borderColor: ['#2f80ed','#f59e0b','#22c55e','#ef4444','#94a3b8'],
+            borderWidth: 1.5,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#8fa4be', font: { size: 11 }, padding: 12, boxWidth: 12 } }
+          }
+        }
+      });
+    }
+
+    // ════════════════════════════════════════
+    // REPORTES LIST
+    // ════════════════════════════════════════
+    async function loadReportes() {
+      const tb = document.getElementById('reportesTable');
+      tb.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="loader"></div></div></td></tr>`;
+      try {
+        const data = await apiFetch('/api/reportes');
+        allReportes = data;
+        renderReportesTable(data);
+      } catch(e) {}
+    }
+
+    function renderReportesTable(list) {
+      const tb = document.getElementById('reportesTable');
+      if (!list.length) {
+        tb.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No hay reportes que mostrar</div></div></td></tr>`;
+        return;
+      }
+      tb.innerHTML = [...list].reverse().map(r => {
+        const esPendiente = r.estado === 'PENDIENTE';
+        const esTipo3 = r.tipoFalta === 'TIPO_III';
+        return `<tr>
+          <td><code style="color:var(--accent);font-size:12px;">#${r.id}</code></td>
+          <td style="font-size:12px;">${fmtFecha(r.fechaHora)}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.lugar}</td>
+          <td>${tipoBadge(r.tipoFalta)}</td>
+          <td>${estadoBadge(r.estado)}</td>
+          <td style="font-size:12px;color:var(--text-dim)">${r.firmadoPor || '—'}</td>
+          <td>
+            <div class="actions-cell">
+              <button class="btn btn-ghost btn-sm" onclick="verDetalle(${r.id})">Ver</button>
+              ${esPendiente ? `<button class="btn btn-ghost btn-sm" onclick="openEditarReporte(${r.id})">Editar</button>` : ''}
+              ${esPendiente && !esTipo3 ? `<button class="btn btn-danger btn-sm" onclick="eliminarReporte(${r.id})">Eliminar</button>` : ''}
+              ${esTipo3 && esPendiente ? `<button class="btn btn-success btn-sm" onclick="firmarReporte(${r.id})">✓ Firmar</button>` : ''}
+              ${esTipo3 ? `<button class="btn btn-ghost btn-sm" onclick="enviarSiuce(${r.id})">SIUCE</button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function filtrarReportes(val, campo) {
+      let lista = [...allReportes];
+      const filtroTipo = document.getElementById('filtroTipo').value;
+      const filtroEstado = document.getElementById('filtroEstado').value;
+      if (filtroTipo) lista = lista.filter(r => r.tipoFalta === filtroTipo);
+      if (filtroEstado) lista = lista.filter(r => r.estado === filtroEstado);
+      renderReportesTable(lista);
+    }
+
+    // ════════════════════════════════════════
+    // CREAR / EDITAR REPORTE
+    // ════════════════════════════════════════
+    function openCrearReporte() {
+      document.getElementById('rpt_id').value = '';
+      document.getElementById('rpt_lugar').value = '';
+      document.getElementById('rpt_desc').value = '';
+      document.getElementById('tipoPreview').style.display = 'none';
+      document.getElementById('modalReporteTitulo').textContent = 'Nuevo reporte disciplinario';
+      openModal('modalReporte');
+    }
+
+    async function openEditarReporte(id) {
+      try {
+        const r = await apiFetch(`/api/reportes/${id}`);
+        document.getElementById('rpt_id').value = r.id;
+        document.getElementById('rpt_lugar').value = r.lugar;
+        document.getElementById('rpt_desc').value = r.descripcionHecho;
+        document.getElementById('modalReporteTitulo').textContent = `Editar reporte #${r.id}`;
+        previewTipo();
+        openModal('modalReporte');
+      } catch(e) {}
+    }
+
+    function previewTipo() {
+      const desc = document.getElementById('rpt_desc').value.toLowerCase();
+      const t3 = ['arma','cuchillo','pistola','violencia sexual','abuso sexual','agresion fisica grave','agresión física grave','hospitaliz','delito','herida','sangre','fractura'];
+      const t2 = ['bullying','acoso','ciberacoso','intimidacion','intimidación','amenaza','golpe','pelea repetida','exclusion','exclusión','humillacion','humillación','matoneo'];
+      let tipo = 'TIPO_I', label = '🟢 Tipo I — Falta leve', cls = 'badge-t1';
+      if (t3.some(p => desc.includes(p))) { tipo='TIPO_III'; label='🔴 Tipo III — Falta grave (requiere firma y SIUCE)'; cls='badge-t3'; }
+      else if (t2.some(p => desc.includes(p))) { tipo='TIPO_II'; label='🟡 Tipo II — Falta moderada (acoso/intimidación)'; cls='badge-t2'; }
+      const el = document.getElementById('tipoPreview');
+      el.style.display = desc.length > 5 ? 'inline-flex' : 'none';
+      el.innerHTML = `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    async function guardarReporte() {
+      const id = document.getElementById('rpt_id').value;
+      const lugar = document.getElementById('rpt_lugar').value.trim();
+      const descripcionHecho = document.getElementById('rpt_desc').value.trim();
+      if (!lugar || !descripcionHecho) { toast('Completa todos los campos obligatorios', 'err'); return; }
+      try {
+        if (id) {
+          await apiFetch(`/api/reportes/${id}`, { method:'PUT', body: JSON.stringify({ lugar, descripcionHecho }) });
+          toast('Reporte actualizado correctamente', 'ok');
+        } else {
+          await apiFetch('/api/reportes', { method:'POST', body: JSON.stringify({ lugar, descripcionHecho }) });
+          toast('Reporte creado correctamente', 'ok');
+        }
+        closeModal('modalReporte');
+        if (currentPage === 'reportes') loadReportes();
+        if (currentPage === 'dashboard') loadDashboard();
+      } catch(e) {}
+    }
+
+    async function eliminarReporte(id) {
+      if (!confirm(`¿Eliminar el reporte #${id}? Esta acción no se puede deshacer.`)) return;
+      try {
+        await apiFetch(`/api/reportes/${id}`, { method:'DELETE' });
+        toast('Reporte eliminado', 'ok');
+        loadReportes();
+      } catch(e) {}
+    }
+
+    async function firmarReporte(id) {
+      if (!confirm(`¿Firmar el reporte #${id} como Rector? Esta acción cambia el estado a FIRMADO.`)) return;
+      try {
+        await apiFetch(`/api/reportes/${id}/firmar`, { method:'POST' });
+        toast('Reporte firmado correctamente', 'ok');
+        loadReportes();
+      } catch(e) {}
+    }
+
+    async function enviarSiuce(id) {
+      openModal('modalSiuce');
+      document.getElementById('siuceBody').innerHTML = `<div class="empty-state"><div class="loader"></div></div>`;
+      try {
+        const data = await apiFetch(`/api/reportes/${id}/enviar-siuce`);
+        renderSiuce(data);
+      } catch(e) {
+        document.getElementById('siuceBody').innerHTML = `<div class="alert alert-danger">No se pudo generar el formato SIUCE</div>`;
+      }
+    }
+
+    function renderSiuce(d) {
+      const personas = (arr, titulo) => arr && arr.length ? `
+        <div class="siuce-section">
+          <div class="siuce-section-title">${titulo}</div>
+          ${arr.map(p => `<div class="siuce-person"><strong>${p.nombre}</strong> · Grado ${p.grado||'—'}</div>`).join('')}
+        </div>` : '';
+
+      document.getElementById('siuceBody').innerHTML = `
+        <div class="siuce-doc" id="siuceDocPrint">
+          <div class="siuce-header">
+            <h1>Sistema de Información Unificado de Convivencia Escolar</h1>
+            <p>Formato de Reporte — Ley 1620 de 2013 · Decreto 1965 de 2013</p>
+          </div>
+          <div class="siuce-section">
+            <div class="siuce-section-title">Datos del incidente</div>
+            <div class="siuce-row"><span class="siuce-key">Fecha y hora:</span><span class="siuce-val">${fmtFecha(d.fechaReporte)}</span></div>
+            <div class="siuce-row"><span class="siuce-key">Lugar:</span><span class="siuce-val">${d.lugar}</span></div>
+            <div class="siuce-row"><span class="siuce-key">Tipo de falta:</span><span class="siuce-val">${d.tipoFalta}</span></div>
+            <div class="siuce-row"><span class="siuce-key">Descripción:</span><span class="siuce-val">${d.descripcion}</span></div>
+          </div>
+          ${personas(d.victimas, 'Víctimas')}
+          ${personas(d.agresores, 'Agresores')}
+          ${personas(d.testigos, 'Testigos')}
+          <div class="siuce-section">
+            <div class="siuce-section-title">Medidas cautelares adoptadas</div>
+            ${(d.medidasCautelares||[]).map(m => `<div class="siuce-person">• ${m}</div>`).join('')}
+          </div>
+          <div class="siuce-firma">
+            <div class="siuce-firma-box">
+              <div style="height:36px;"></div>
+              <div class="siuce-firma-line">${d.firmadoPor}</div>
+              <div style="font-size:10px;color:#777;margin-top:4px;">Rector(a) — Firma y sello</div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ════════════════════════════════════════
+    // DETALLE REPORTE
+    // ════════════════════════════════════════
+    async function verDetalle(id) {
+      navigate('detalle');
+      document.getElementById('detalleContent').innerHTML = `<div class="empty-state"><div class="loader"></div></div>`;
+      try {
+        const [r, implicados] = await Promise.all([
+          apiFetch(`/api/reportes/${id}`),
+          apiFetch(`/api/reportes/${id}/implicados`)
+        ]);
+        renderDetalle(r, implicados);
+      } catch(e) {}
+    }
+
+    function renderDetalle(r, implicados) {
+      const esTipo3 = r.tipoFalta === 'TIPO_III';
+      const esPendiente = r.estado === 'PENDIENTE';
+
+      let alertas = '';
+      if (esTipo3 && esPendiente) {
+        alertas += `<div class="alert alert-danger">⚠ Este reporte es de Tipo III. Debe ser firmado por el Rector y enviado al SIUCE.</div>`;
+      }
+      if (esTipo3 && r.entidadSalud) {
+        alertas += `<div class="alert alert-info">🏥 EPS asignada: <strong>${r.entidadSalud.nombre}</strong> · ${r.entidadSalud.telefono}</div>`;
+      }
+      if (esTipo3 && r.policia) {
+        alertas += `<div class="alert alert-warning">👮 Policía notificada: <strong>${r.policia.nombre}</strong> · ${r.policia.estacion}</div>`;
+      }
+
+      const botonesHeader = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          ${esPendiente ? `<button class="btn btn-ghost btn-sm" onclick="openEditarReporte(${r.id})">✏ Editar</button>` : ''}
+          ${esPendiente && !esTipo3 ? `<button class="btn btn-danger btn-sm" onclick="eliminarReporte(${r.id})">🗑 Eliminar</button>` : ''}
+          ${esTipo3 && esPendiente ? `<button class="btn btn-success" onclick="firmarReporte(${r.id})">✓ Firmar reporte</button>` : ''}
+          ${esTipo3 ? `<button class="btn btn-primary btn-sm" onclick="enviarSiuce(${r.id})">📄 Formato SIUCE</button>` : ''}
+        </div>`;
+
+      const implicadosHTML = implicados.length
+        ? `<table><thead><tr><th>Nombre</th><th>Documento</th><th>Grado</th><th>Rol</th><th>Acudiente</th><th></th></tr></thead>
+            <tbody>${implicados.map(i => `
+              <tr>
+                <td>${i.nombreCompleto}</td>
+                <td style="font-size:12px;">${i.tipoDocumento||''} ${i.numeroDocumento||'—'}</td>
+                <td>${i.grado||'—'}</td>
+                <td>${rolBadge(i.rol)}</td>
+                <td style="font-size:12px;color:var(--text-dim)">${i.acudiente ? i.acudiente.nombreCompleto : '—'}</td>
+                <td><button class="btn btn-danger btn-icon btn-sm" onclick="eliminarImplicado(${i.id},${r.id})" title="Eliminar">✕</button></td>
+              </tr>`).join('')}</tbody></table>`
+        : `<div class="empty-state" style="padding:24px;"><div class="empty-text">Sin implicados registrados</div></div>`;
+
+      document.getElementById('detalleContent').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <span style="font-family:'Lora',serif;font-size:22px;font-weight:600;">Reporte #${r.id}</span>
+              ${tipoBadge(r.tipoFalta)} ${estadoBadge(r.estado)}
+            </div>
+            <div style="font-size:12px;color:var(--text-dim)">${fmtFecha(r.fechaHora)} · ${r.lugar}</div>
+          </div>
+          ${botonesHeader}
+        </div>
+        ${alertas}
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card">
+            <div class="detail-section-title">Información del hecho</div>
+            <div class="detail-row"><span class="detail-key">Lugar</span><span class="detail-val">${r.lugar}</span></div>
+            <div class="detail-row"><span class="detail-key">Tipo de falta</span><span class="detail-val">${tipoBadge(r.tipoFalta)}</span></div>
+            <div class="detail-row"><span class="detail-key">Estado</span><span class="detail-val">${estadoBadge(r.estado)}</span></div>
+            <div class="detail-row"><span class="detail-key">Firmado por</span><span class="detail-val">${r.firmadoPor||'Pendiente'}</span></div>
+            <div style="margin-top:14px;">
+              <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Descripción del hecho</div>
+              <div style="font-size:13px;color:var(--text-main);line-height:1.7;background:rgba(0,0,0,0.2);padding:12px 14px;border-radius:var(--radius-sm);">${r.descripcionHecho}</div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="detail-section-title" style="margin-bottom:0;">Implicados (${implicados.length})</div>
+              <button class="btn btn-primary btn-sm" onclick="openAgregarImplicado(${r.id})">＋ Agregar</button>
+            </div>
+            <div class="table-wrap">${implicadosHTML}</div>
+          </div>
+        </div>`;
+    }
+
+    // ════════════════════════════════════════
+    // IMPLICADOS
+    // ════════════════════════════════════════
+    async function openAgregarImplicado(reporteId) {
+      document.getElementById('imp_reporteId').value = reporteId;
+      document.getElementById('imp_nombre').value = '';
+      document.getElementById('imp_numDoc').value = '';
+      document.getElementById('imp_grado').value = '';
+      document.getElementById('imp_rol').value = '';
+
+      // cargar colegios y acudientes
+      try {
+        const [colegios, acudientes] = await Promise.all([
+          apiFetch('/api/colegios'),
+          apiFetch('/api/acudientes')
+        ]);
+        const sc = document.getElementById('imp_colegio');
+        sc.innerHTML = colegios.map(c => `<option value="${c.id}">${c.nombre} — ${c.sede}</option>`).join('');
+        const sa = document.getElementById('imp_acudiente');
+        sa.innerHTML = `<option value="">— Sin acudiente —</option>` +
+          acudientes.map(a => `<option value="${a.id}">${a.nombreCompleto} · ${a.telefono}</option>`).join('');
+      } catch(e) {}
+
+      openModal('modalImplicado');
+    }
+
+    async function guardarImplicado() {
+      const reporteId = document.getElementById('imp_reporteId').value;
+      const rol = document.getElementById('imp_rol').value.toUpperCase();
+      const nombreCompleto = document.getElementById('imp_nombre').value.trim();
+      if (!nombreCompleto || !rol) { toast('Nombre y rol son obligatorios', 'err'); return; }
+      const body = {
+        nombreCompleto,
+        rol,
+        tipoDocumento: document.getElementById('imp_tipoDoc').value,
+        numeroDocumento: document.getElementById('imp_numDoc').value,
+        grado: document.getElementById('imp_grado').value,
+        colegioId: document.getElementById('imp_colegio').value || null,
+        acudienteId: document.getElementById('imp_acudiente').value || null,
+      };
+      try {
+        await apiFetch(`/api/reportes/${reporteId}/implicados`, { method:'POST', body: JSON.stringify(body) });
+        toast('Implicado agregado', 'ok');
+        closeModal('modalImplicado');
+        verDetalle(reporteId);
+      } catch(e) {}
+    }
+
+    async function eliminarImplicado(id, reporteId) {
+      if (!confirm('¿Eliminar este implicado?')) return;
+      try {
+        await apiFetch(`/api/reportes/${reporteId}/implicados/${id}`, { method:'DELETE' });
+        toast('Implicado eliminado', 'ok');
+        verDetalle(reporteId);
+      } catch(e) {}
+    }
+
+    // ════════════════════════════════════════
+    // ACUDIENTES
+    // ════════════════════════════════════════
+    async function loadAcudientes() {
+      const el = document.getElementById('acudientesList');
+      el.innerHTML = `<div class="empty-state"><div class="loader"></div></div>`;
+      try {
+        const data = await apiFetch('/api/acudientes');
+        if (!data.length) { el.innerHTML = `<div class="empty-state"><div class="empty-text">Sin acudientes registrados</div></div>`; return; }
+        el.innerHTML = data.map(a => `
+          <div class="acudiente-mini">
+            <div class="acudiente-info">
+              <div class="name">${a.nombreCompleto}</div>
+              <div class="contact">${a.telefono} · ${a.email||'—'}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="notif-dot ${a.notificado?'yes':'no'}" title="${a.notificado?'Notificado':'Sin notificar'}"></span>
+              ${!a.notificado ? `<button class="btn btn-success btn-sm" onclick="notificarAcudiente(${a.id})">Notificar</button>` : `<span style="font-size:11px;color:var(--tipo1)">✓</span>`}
+            </div>
+          </div>`).join('');
+      } catch(e) {}
+    }
+
+    async function crearAcudiente() {
+      const nombre = document.getElementById('acu_nombre').value.trim();
+      const telefono = document.getElementById('acu_tel').value.trim();
+      const email = document.getElementById('acu_email').value.trim();
+      if (!nombre) { toast('El nombre es obligatorio', 'err'); return; }
+      try {
+        await apiFetch('/api/acudientes', { method:'POST', body: JSON.stringify({ nombreCompleto: nombre, telefono, email }) });
+        toast('Acudiente guardado', 'ok');
+        document.getElementById('acu_nombre').value = '';
+        document.getElementById('acu_tel').value = '';
+        document.getElementById('acu_email').value = '';
+        loadAcudientes();
+      } catch(e) {}
+    }
+
+    async function notificarAcudiente(id) {
+      try {
+        await apiFetch(`/api/acudientes/${id}/notificar`, { method:'PUT' });
+        toast('Acudiente notificado', 'ok');
+        loadAcudientes();
+      } catch(e) {}
+    }
+
+    // ════════════════════════════════════════
+    // CATÁLOGO
+    // ════════════════════════════════════════
+    async function loadCatalogo() {
+      try {
+        const eps = await apiFetch('/api/entidades-salud');
+        document.getElementById('epsList').innerHTML = eps.map(e => `
+          <div class="acudiente-mini">
+            <div class="acudiente-info">
+              <div class="name">${e.nombre}</div>
+              <div class="contact">📞 ${e.telefono} · ${e.direccion||'—'}</div>
+            </div>
+          </div>`).join('') || '<div class="empty-state"><div class="empty-text">Sin EPS registradas</div></div>';
+      } catch(e) {}
+
+      try {
+        const pol = await apiFetch('/api/policia');
+        document.getElementById('policiaList').innerHTML = pol.map(p => `
+          <div class="acudiente-mini">
+            <div class="acudiente-info">
+              <div class="name">${p.nombre}</div>
+              <div class="contact">${p.estacion} · 📞 ${p.telefonoEmergencia}</div>
+            </div>
+          </div>`).join('') || '<div class="empty-state"><div class="empty-text">Sin estaciones registradas</div></div>';
+      } catch(e) {}
+
+      try {
+        const col = await apiFetch('/api/colegios');
+        document.getElementById('colegiosList').innerHTML = `
+          <table><thead><tr><th>Nombre</th><th>Sede</th><th>NIT</th></tr></thead>
+          <tbody>${col.map(c => `
+            <tr>
+              <td>${c.nombre}</td>
+              <td>${c.sede||'—'}</td>
+              <td style="font-size:12px;color:var(--text-dim)">${c.nit}</td>
+            </tr>`).join('')}</tbody></table>`;
+      } catch(e) {}
+    }
+
+    // ════════════════════════════════════════
+    // MODAL HELPERS
+    // ════════════════════════════════════════
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-backdrop').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+
+    // ════════════════════════════════════════
+    // INIT
+    // ════════════════════════════════════════
+    loadDashboard();
+</script>
+</body>
+</html>
