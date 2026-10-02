@@ -1,27 +1,21 @@
 package com.colegio.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "colegios")
+@Document(collection = "colegios")
 public class Colegio {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
-
-    @Column(name = "sede", length = 100)
     private String sede;
-
-    @Column(name = "nit", nullable = false, unique = true, length = 20)
     private String nit;
 
     public Colegio() {}
 
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     public String getSede() { return sede; }

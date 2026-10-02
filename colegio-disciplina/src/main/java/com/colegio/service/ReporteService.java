@@ -29,11 +29,11 @@ public class ReporteService {
 
     public List<Reporte> listarTodos() { return reporteRepo.findAll(); }
 
-    public Optional<Reporte> buscarPorId(Long id) { return reporteRepo.findById(id); }
+    public Optional<Reporte> buscarPorId(String id) { return reporteRepo.findById(id); }
 
 
     @Transactional
-    public Reporte actualizar(Long id, Map<String, Object> body) {
+    public Reporte actualizar(String id, Map<String, Object> body) {
         Reporte reporte = reporteRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado: " + id));
         if (!"PENDIENTE".equals(reporte.getEstado()))
@@ -48,7 +48,7 @@ public class ReporteService {
     }
 
     @Transactional
-    public void eliminar(Long id) {
+    public void eliminar(String id) {
         Reporte reporte = reporteRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado: " + id));
         if ("TIPO_III".equals(reporte.getTipoFalta()))
@@ -70,7 +70,7 @@ public class ReporteService {
         return "TIPO_I";
     }
 
-    public Map<String, Object> generarFormatoSiuce(Long id) {
+    public Map<String, Object> generarFormatoSiuce(String id) {
         Reporte reporte = reporteRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado: " + id));
         if (!"TIPO_III".equals(reporte.getTipoFalta()))
@@ -83,11 +83,12 @@ public class ReporteService {
 
         for (Implicado imp : implicados) {
             Map<String, String> datos = new LinkedHashMap<>();
-            String nombre = imp.getEstudiante() != null
-                    ? imp.getEstudiante().getNombres() + " " + imp.getEstudiante().getApellidos()
+            Estudiante estudiante = (Estudiante) imp.getEstudiante();
+            String nombre = estudiante != null
+                ? estudiante.getNombres() + " " + estudiante.getApellidos()
                     : "Desconocido";
-            String grado = imp.getEstudiante() != null && imp.getEstudiante().getGrado() != null
-                    ? imp.getEstudiante().getGrado() : "N/A";
+            String grado = estudiante != null && estudiante.getGrado() != null
+                ? estudiante.getGrado() : "N/A";
             datos.put("nombre", nombre);
             datos.put("grado",  grado);
             switch (imp.getRol().toUpperCase()) {
@@ -99,10 +100,10 @@ public class ReporteService {
 
         List<String> medidas = new ArrayList<>();
         medidas.add("Citacion a acudientes");
-        if (reporte.getEntidadSalud() != null)
-            medidas.add("Remision a " + reporte.getEntidadSalud().getNombre());
-        if (reporte.getPolicia() != null)
-            medidas.add("Reporte a " + reporte.getPolicia().getNombre());
+        if (reporte.getEntidadSaludId() != null)
+            medidas.add("Remision a " + reporte.getEntidadSaludId());
+        if (reporte.getPoliciaId() != null)
+            medidas.add("Reporte a " + reporte.getPoliciaId());
         if ("FIRMADO".equals(reporte.getEstado()))
             medidas.add("Reporte firmado por el Rector");
 
@@ -146,30 +147,41 @@ public class ReporteService {
                         .filter(e -> e.getLatitud() != null && e.getLongitud() != null)
                         .min(Comparator.comparingDouble(e ->
                                 distancia(lat, lon, e.getLatitud(), e.getLongitud())))
-                        .ifPresent(reporte::setEntidadSalud);
+                            .ifPresent(entidad -> reporte.setEntidadSaludId(
+                                String.valueOf(entidad.getId())));
 
                 // Policía más cercana
                 policiaRepo.findAll().stream()
                         .filter(p -> p.getLatitud() != null && p.getLongitud() != null)
                         .min(Comparator.comparingDouble(p ->
                                 distancia(lat, lon, p.getLatitud(), p.getLongitud())))
-                        .ifPresent(reporte::setPolicia);
+                        .ifPresent(policia -> reporte.setPoliciaId(String.valueOf(policia.getId())));
             } else {
                 // Sin ubicación, toma la primera disponible
-                entidadSaludRepo.findAll().stream().findFirst().ifPresent(reporte::setEntidadSalud);
-                policiaRepo.findAll().stream().findFirst().ifPresent(reporte::setPolicia);
+                entidadSaludRepo.findAll().stream().findFirst()
+                    .ifPresent(entidad -> reporte.setEntidadSaludId(String.valueOf(entidad.getId())));
+                policiaRepo.findAll().stream().findFirst()
+                    .ifPresent(policia -> reporte.setPoliciaId(String.valueOf(policia.getId())));
             }
         }
         return reporteRepo.save(reporte);
     }
 
     public Map<String, Object> estadisticas() {
-        List<Object[]> porTipo  = reporteRepo.contarPorTipo();
-        List<Object[]> porGrado = implicadoRepo.contarPorGrado();
-        Map<String, Long> mapTipo  = new LinkedHashMap<>();
+        List<Reporte> reportes = reporteRepo.findAll();
+        Map<String, Long> mapTipo = new LinkedHashMap<>();
+        for (Reporte reporte : reportes) {
+            if (reporte.getTipoFalta() != null) {
+                mapTipo.merge(reporte.getTipoFalta(), 1L, Long::sum);
+            }
+        }
         Map<String, Long> mapGrado = new LinkedHashMap<>();
-        for (Object[] row : porTipo)  mapTipo.put((String) row[0],  (Long) row[1]);
-        for (Object[] row : porGrado) mapGrado.put((String) row[0], (Long) row[1]);
+        for (Implicado implicado : implicadoRepo.findAll()) {
+            Estudiante estudiante = (Estudiante) implicado.getEstudiante();
+            if (estudiante != null && estudiante.getGrado() != null) {
+                mapGrado.merge(estudiante.getGrado(), 1L, Long::sum);
+            }
+        }
         Map<String, Object> resultado = new LinkedHashMap<>();
         resultado.put("totalReportes", reporteRepo.count());
         resultado.put("porTipo",       mapTipo);
@@ -188,7 +200,7 @@ public class ReporteService {
     }
 
     @Transactional
-    public Reporte firmar(Long id) {
+    public Reporte firmar(String id) {
         Reporte reporte = reporteRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado: " + id));
         if (!"TIPO_III".equals(reporte.getTipoFalta()))
@@ -196,9 +208,10 @@ public class ReporteService {
 
         List<Implicado> implicados = implicadoRepo.findByReporteId(id);
         String nombreRector = "Rector";
-        if (!implicados.isEmpty() && implicados.get(0).getEstudiante() != null
-                && implicados.get(0).getEstudiante().getColegio() != null) {
-            Long colegioId = implicados.get(0).getEstudiante().getColegio().getId();
+        Estudiante estudiante = implicados.isEmpty() ? null
+            : (Estudiante) implicados.get(0).getEstudiante();
+        if (estudiante != null && estudiante.getColegio() != null) {
+            String colegioId = estudiante.getColegio().getId();
             nombreRector = rectorRepo.findByColegioId(colegioId)
                     .map(Rector::getNombreCompleto).orElse("Rector");
         }

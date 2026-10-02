@@ -1,97 +1,49 @@
 package com.colegio.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "estudiantes")
+@Document(collection = "estudiantes")
 public class Estudiante {
+    @Id
+    private String id;
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    // ── Identificación ──
-    @Column(name = "tipo_documento", nullable = false, length = 30)
-    private String tipoDocumento; // RC, TI, CC, PPT, etc.
-
-    @Column(name = "numero_documento", nullable = false, unique = true, length = 30)
+    @Indexed(unique = true)
     private String numeroDocumento;
 
-    @Column(name = "nombres", nullable = false, length = 100)
+    private String tipoDocumento;
     private String nombres;
-
-    @Column(name = "apellidos", nullable = false, length = 100)
     private String apellidos;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "acudiente_id")
-    private Acudiente acudiente;
-
-    // ── Demográficos ──
-    @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
-
-    @Column(name = "genero", length = 20)
     private String genero;
-
-    @Column(name = "pais_origen", length = 60)
+    private String grado;
+    private String jornada;
+    private String sede;
     private String paisOrigen;
-
-    @Column(name = "departamento_expedicion", length = 60)
     private String departamentoExpedicion;
-
-    @Column(name = "municipio_expedicion", length = 60)
     private String municipioExpedicion;
+    private String grupoEtnico;
+    private String tipoDiscapacidad;
+    private Boolean victimaConflicto;
+    private Double promedioAcademico;
+    private Integer numeroInasistencias;
 
-    // ── Contacto ──
-    @Column(name = "direccion_residencia", length = 200)
     private String direccionResidencia;
-
-    @Column(name = "telefono", length = 20)
     private String telefono;
-
-    @Column(name = "email", length = 100)
     private String email;
-
-    @Column(name = "latitud")
     private Double latitud;
-
-    @Column(name = "longitud")
     private Double longitud;
 
-    // ── Caracterización poblacional ──
-    @Column(name = "grupo_etnico", length = 50)
-    private String grupoEtnico; // INDIGENA, AFRODESCENDIENTE, RAIZAL, ROM, NINGUNO
+    private String colegioId;
+    private String acudienteId;
 
-    @Column(name = "tipo_discapacidad", length = 80)
-    private String tipoDiscapacidad;
-
-    @Column(name = "victima_conflicto")
-    private Boolean victimaConflicto = false;
-
-    // ── Información académica ──
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "colegio_id")
     private Colegio colegio;
-
-    @Column(name = "sede", length = 100)
-    private String sede;
-
-    @Column(name = "jornada", length = 30)
-    private String jornada; // MANANA, TARDE, NOCHE, UNICA
-
-    @Column(name = "grado", length = 20)
-    private String grado;
-
-    // ── Atributos numéricos
-    @Column(name = "promedio_academico")
-    private Double promedioAcademico; // 0.0 - 5.0
-
-    @Column(name = "numero_inasistencias")
-    private Integer numeroInasistencias = 0;
+    private Acudiente acudiente;
 
     // ── Getters y Setters ──
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public String getTipoDocumento() { return tipoDocumento; }
     public void setTipoDocumento(String t) { this.tipoDocumento = t; }
     public String getNumeroDocumento() { return numeroDocumento; }

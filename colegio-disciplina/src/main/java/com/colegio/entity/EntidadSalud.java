@@ -5,25 +5,17 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "entidades_salud")
 public class EntidadSalud {
-
+@Document(collection = "entidades_salud")
+public class EntidadSalud {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
-
-    @Column(name = "telefono", length = 20)
     private String telefono;
-
-    @Column(name = "direccion", length = 200)
     private String direccion;
-
-    @Column(name = "latitud")
     private Double latitud;
-
-    @Column(name = "longitud")
     private Double longitud;
+}
 
     public EntidadSalud() {}
 

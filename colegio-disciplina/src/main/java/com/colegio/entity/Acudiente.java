@@ -2,31 +2,18 @@ package com.colegio.entity;
 
 import jakarta.persistence.*;
 
-@Entity
-@Table(name = "acudientes")
+@Document(collection = "acudientes")
 public class Acudiente {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "nombre_completo", nullable = false, length = 150)
+    private String tipoDocumento;
+    private String numeroDocumento;
     private String nombreCompleto;
-
-    @Column(name = "telefono", length = 20)
     private String telefono;
-
-    @Column(name = "email", length = 100)
     private String email;
-
-    @Column(name = "notificado")
     private Boolean notificado = false;
 
-    @Column(name = "tipo_documento", length = 20)
-    private String tipoDocumento;
-
-    @Column(name = "numero_documento", length = 30)
-    private String numeroDocumento;
 
     public Acudiente() {}
 

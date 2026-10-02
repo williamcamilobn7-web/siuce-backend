@@ -28,7 +28,7 @@ public class EstudianteService {
         return estudianteRepo.findAll(pageable);
     }
 
-    public Optional<Estudiante> buscarPorId(Long id) { return estudianteRepo.findById(id); }
+    public Optional<Estudiante> buscarPorId(String id) { return estudianteRepo.findById(id); }
 
     public Optional<Estudiante> buscarPorDocumento(String doc) { return estudianteRepo.findByNumeroDocumento(doc); }
 
@@ -40,7 +40,7 @@ public class EstudianteService {
     }
 
     @Transactional
-    public Estudiante actualizar(Long id, Map<String, Object> body) {
+    public Estudiante actualizar(String id, Map<String, Object> body) {
         Estudiante e = estudianteRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Estudiante no encontrado: " + id));
         mapearCampos(e, body);
@@ -48,7 +48,7 @@ public class EstudianteService {
     }
 
     @Transactional
-    public void eliminar(Long id) {
+    public void eliminar(String id) {
         if (!estudianteRepo.existsById(id))
             throw new IllegalArgumentException("Estudiante no encontrado: " + id);
         estudianteRepo.deleteById(id);

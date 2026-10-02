@@ -1,37 +1,33 @@
 package com.colegio.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "implicados")
+@Document(collection = "implicados")
 public class Implicado {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Id
+    private String id;
 
-    @Column(name = "rol", nullable = false, length = 20)
-    private String rol; // VICTIMA, AGRESOR, TESTIGO
+    private String rol;
+    private String reporteId;
+    private String estudianteId;
+    private String acudienteId;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "estudiante_id", nullable = false)
-    private Estudiante estudiante;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "acudiente_id")
-    private Acudiente acudiente;
-
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reporte_id", nullable = false)
-    private Reporte reporte;
-
-    public Long getId() { return id; }
+    public String getId() { return id; }
+    
     public String getRol() { return rol; }
     public void setRol(String r) { this.rol = r; }
-    public Estudiante getEstudiante() { return estudiante; }
-    public void setEstudiante(Estudiante e) { this.estudiante = e; }
-    public Acudiente getAcudiente() { return acudiente; }
-    public void setAcudiente(Acudiente a) { this.acudiente = a; }
-    public Reporte getReporte() { return reporte; }
-    public void setReporte(Reporte r) { this.reporte = r; }
+
+    public String getReporteId() { return reporteId; }
+    public void setReporteId(String r) { this.reporteId = r; }
+
+    public String getEstudianteId() { return estudianteId; }
+    public void setEstudianteId(String e) { this.estudianteId = e; }
+
+    public String getAcudienteId() { return acudienteId; }
+    public void setAcudienteId(String a) { this.acudienteId = a; }
+
+    public Object getEstudiante() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

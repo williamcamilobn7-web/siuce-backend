@@ -3,7 +3,6 @@ package com.colegio.service;
 import com.colegio.entity.*;
 import com.colegio.repository.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,40 +15,43 @@ public class ImplicadoService {
     private final AcudienteRepository  acudienteRepo;
     private final EstudianteRepository estudianteRepo;
 
-    public ImplicadoService(ImplicadoRepository implicadoRepo, ReporteRepository reporteRepo,
-                            AcudienteRepository acudienteRepo, EstudianteRepository estudianteRepo) {
+    public ImplicadoService(ImplicadoRepository implicadoRepo,
+                            ReporteRepository reporteRepo,
+                            AcudienteRepository acudienteRepo,
+                            EstudianteRepository estudianteRepo) {
         this.implicadoRepo  = implicadoRepo;
         this.reporteRepo    = reporteRepo;
         this.acudienteRepo  = acudienteRepo;
         this.estudianteRepo = estudianteRepo;
     }
 
-    public List<Implicado> listarPorReporte(Long reporteId) {
+    public List<Implicado> listarPorReporte(String reporteId) {
         return implicadoRepo.findByReporteId(reporteId);
     }
 
-    public Optional<Implicado> buscarPorId(Long id) {
+    public Optional<Implicado> buscarPorId(String id) {
         return implicadoRepo.findById(id);
     }
 
-    @Transactional
-    public Implicado agregar(Long reporteId, Map<String, Object> body) {
-        Reporte reporte = reporteRepo.findById(reporteId)
-                .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado: " + reporteId));
+    public Implicado agregar(String reporteId, Map<String, Object> body) {
+        // Verifica que el reporte existe
+        reporteRepo.findById(reporteId)
+            .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado: " + reporteId));
+
         Implicado imp = new Implicado();
         imp.setRol((String) body.get("rol"));
-        imp.setReporte(reporte);
+        imp.setReporteId(reporteId);
+
         if (body.get("estudianteId") != null)
-            estudianteRepo.findById(Long.valueOf(body.get("estudianteId").toString()))
-                    .ifPresent(imp::setEstudiante);
+            imp.setEstudianteId(body.get("estudianteId").toString());
+
         if (body.get("acudienteId") != null)
-            acudienteRepo.findById(Long.valueOf(body.get("acudienteId").toString()))
-                    .ifPresent(imp::setAcudiente);
+            imp.setAcudienteId(body.get("acudienteId").toString());
+
         return implicadoRepo.save(imp);
     }
 
-    @Transactional
-    public void eliminar(Long id) {
+    public void eliminar(String id) {
         if (!implicadoRepo.existsById(id))
             throw new IllegalArgumentException("Implicado no encontrado: " + id);
         implicadoRepo.deleteById(id);

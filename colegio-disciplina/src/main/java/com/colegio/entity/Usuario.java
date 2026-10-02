@@ -1,35 +1,26 @@
 package com.colegio.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "usuarios")
+@Document(collection = "usuarios")
 public class Usuario {
+    @Id
+    private String id;
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "username", nullable = false, unique = true, length = 60)
+    @Indexed(unique = true)
     private String username;
-
-    @Column(name = "password", nullable = false, length = 255)
     private String password;
-
-    @Column(name = "rol", nullable = false, length = 20)
     private String rol; // ESTUDIANTE, ACUDIENTE, DOCENTE, DISCIPLINA
-
-    @OneToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "estudiante_id")
-    private Estudiante estudiante;
-
-    @OneToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "acudiente_id")
-    private Acudiente acudiente;
-
-    @Column(name = "nombre_completo", length = 150)
     private String nombreCompleto;
 
-    public Long getId() { return id; }
+    @Id
+    private Estudiante estudiante;
+    @Id
+    private Acudiente acudiente;
+
+    public String getId() { return id; }
     public String getUsername() { return username; }
     public void setUsername(String u) { this.username = u; }
     public String getPassword() { return password; }
