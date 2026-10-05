@@ -1,7 +1,12 @@
 package com.colegio.entity;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+/**
+ * Padre, madre o tutor responsable de un estudiante.
+ * Cuando el colegio le avisa de un incidente se marca como notificado.
+ */
 @Document(collection = "acudientes")
 public class Acudiente {
     @Id
@@ -12,12 +17,16 @@ public class Acudiente {
     private String nombreCompleto;
     private String telefono;
     private String email;
-    private Boolean notificado = false;
-
+    // Pasa a true cuando se le avisa de un incidente disciplinario
+    private Boolean notificado;
 
     public Acudiente() {}
 
-    public Long getId() { return id; }
+    public String getId() { return id; }
+    public String getTipoDocumento() { return tipoDocumento; }
+    public void setTipoDocumento(String tipoDocumento) { this.tipoDocumento = tipoDocumento; }
+    public String getNumeroDocumento() { return numeroDocumento; }
+    public void setNumeroDocumento(String numeroDocumento) { this.numeroDocumento = numeroDocumento; }
     public String getNombreCompleto() { return nombreCompleto; }
     public void setNombreCompleto(String nombreCompleto) { this.nombreCompleto = nombreCompleto; }
     public String getTelefono() { return telefono; }
@@ -26,8 +35,5 @@ public class Acudiente {
     public void setEmail(String email) { this.email = email; }
     public Boolean getNotificado() { return notificado; }
     public void setNotificado(Boolean notificado) { this.notificado = notificado; }
-    public String getTipoDocumento() { return tipoDocumento; }
-    public void setTipoDocumento(String t) { this.tipoDocumento = t; }
-    public String getNumeroDocumento() { return numeroDocumento; }
-    public void setNumeroDocumento(String n) { this.numeroDocumento = n; }
 }
+

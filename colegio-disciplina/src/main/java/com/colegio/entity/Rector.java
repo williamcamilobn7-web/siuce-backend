@@ -1,34 +1,28 @@
 package com.colegio.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "rectores")
+/**
+ * Rector de un colegio. Es quien firma los reportes Tipo III.
+ */
+@Document(collection = "rectores")
 public class Rector {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "nombre_completo", nullable = false, length = 150)
     private String nombreCompleto;
-
-    @Column(name = "email", nullable = false, length = 100)
     private String email;
-
-    @JsonIgnore
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "colegio_id")
-    private Colegio colegio;
+    // Referencia al colegio (en Mongo guardamos el id, no el objeto completo)
+    private String colegioId;
 
     public Rector() {}
 
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public String getNombreCompleto() { return nombreCompleto; }
     public void setNombreCompleto(String nombreCompleto) { this.nombreCompleto = nombreCompleto; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    public Colegio getColegio() { return colegio; }
-    public void setColegio(Colegio colegio) { this.colegio = colegio; }
+    public String getColegioId() { return colegioId; }
+    public void setColegioId(String colegioId) { this.colegioId = colegioId; }
 }

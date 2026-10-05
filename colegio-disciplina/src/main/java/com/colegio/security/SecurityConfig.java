@@ -1,5 +1,6 @@
 package com.colegio.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,120 +14,100 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Reglas de acceso: quién puede llamar a cada endpoint.
+ * Las reglas se evalúan en orden y gana la primera que coincida, por eso las más específicas van arriba.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final String DISC = "ROLE_DISCIPLINA";
+    private static final String DOC  = "ROLE_DOCENTE";
+    private static final String RECT = "ROLE_RECTOR";
+    private static final String EST  = "ROLE_ESTUDIANTE";
+    private static final String ACU  = "ROLE_ACUDIENTE";
+
     private final JwtFilter jwtFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
-        this.jwtFilter = jwtFilter;
-    }
+    @Value("${app.cors.origins:http://localhost:4200}")
+    private String corsOrigins;
 
+    public SecurityConfig(JwtFilter jwtFilter) { this.jwtFilter = jwtFilter; }
+
+    // BCrypt: hash de una sola vía con sal, resistente a fuerza bruta (requisito RS-002)
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsSource()))
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
+            .cors(c -> c.configurationSource(corsSource()))
+            // CSRF desactivado porque el token va en el header Authorization y no en una cookie
+            .csrf(csrf -> csrf.disable())
+            // Sin sesión en el servidor: cada petición se autentica con su token
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // Sin token o con token inválido se responde 401 (por defecto Spring respondería 403)
+            .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401, "No autenticado")))
+            .authorizeHttpRequests(auth -> auth
+                // Orden de las reglas: lo público primero y al final "cualquier otra cosa requiere login"
+                // Público
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/login-estudiante").permitAll()
+                .requestMatchers("/", "/index.html", "/*.js", "/*.css").permitAll()
+                // Solo personal de disciplina crea usuarios
+                .requestMatchers("/api/auth/registro").hasAuthority(DISC)
+                .requestMatchers("/api/auth/usuarios/*/cerrar-sesiones").hasAuthority(DISC)
 
-                        // Público
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/*.js", "/*.css").permitAll()
+                .requestMatchers("/api/carga-masiva/**").hasAuthority(DISC)
+                .requestMatchers(HttpMethod.POST, "/api/acudientes/carga-masiva").hasAuthority(DISC)
 
-                        //Carga masiva
-                        .requestMatchers("/api/carga-masiva/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
+                // Estudiantes
+                .requestMatchers(HttpMethod.GET, "/api/estudiantes/**").hasAnyAuthority(DISC, DOC, RECT)
+                .requestMatchers("/api/estudiantes/**").hasAuthority(DISC)
 
-                        // Estudiantes
-                        .requestMatchers(HttpMethod.GET, "/api/estudiantes/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.POST, "/api/estudiantes")
-                        .hasAuthority("ROLE_DISCIPLINA")
-                        .requestMatchers(HttpMethod.PUT, "/api/estudiantes/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
-                        .requestMatchers(HttpMethod.DELETE, "/api/estudiantes/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
+                // Acudientes
+                .requestMatchers(HttpMethod.GET, "/api/acudientes/**").hasAnyAuthority(DISC, DOC, RECT)
+                .requestMatchers("/api/acudientes/**").hasAnyAuthority(DISC, DOC)
 
-                        // Acudientes
-                        .requestMatchers(HttpMethod.GET, "/api/acudientes/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.POST, "/api/acudientes/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.PUT, "/api/acudientes/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
+                // Reportes: operaciones restringidas
+                .requestMatchers(HttpMethod.DELETE, "/api/reportes/**").hasAuthority(DISC)
+                .requestMatchers(HttpMethod.POST, "/api/reportes/*/firmar").hasAuthority(RECT)
+                .requestMatchers(HttpMethod.POST, "/api/reportes/*/enviar-siuce").hasAnyAuthority(DISC, RECT)
+                .requestMatchers(HttpMethod.PUT, "/api/reportes/**").hasAuthority(DISC)
+                .requestMatchers(HttpMethod.POST, "/api/reportes").hasAnyAuthority(DISC, DOC)
+                .requestMatchers(HttpMethod.POST, "/api/reportes/*/implicados").hasAnyAuthority(DISC, DOC)
 
-                        // Reportes — operaciones restringidas
-                        .requestMatchers(HttpMethod.DELETE, "/api/reportes/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
-                        .requestMatchers(HttpMethod.POST, "/api/reportes/*/firmar")
-                        .hasAuthority("ROLE_DISCIPLINA")
-                        .requestMatchers(HttpMethod.POST, "/api/reportes/*/enviar-siuce")
-                        .hasAuthority("ROLE_DISCIPLINA")
+                // Ojo: en el detalle de un reporte entran también estudiantes y acudientes, pero el controller
+                // verifica que solo vean los reportes donde están implicados
+                // Reportes: lectura
+                .requestMatchers(HttpMethod.GET, "/api/reportes/estadisticas").hasAnyAuthority(DISC, DOC, RECT)
+                .requestMatchers(HttpMethod.GET, "/api/reportes").hasAnyAuthority(DISC, DOC, RECT)
+                .requestMatchers(HttpMethod.GET, "/api/reportes/*/implicados/**").hasAnyAuthority(DISC, DOC, RECT)
+                // detalle: el controller valida que estudiantes/acudientes solo vean lo suyo
+                .requestMatchers(HttpMethod.GET, "/api/reportes/*").hasAnyAuthority(DISC, DOC, RECT, EST, ACU)
 
-                        //  Reportes — estadísticas y listado general
-                        .requestMatchers(HttpMethod.GET, "/api/reportes/estadisticas")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.GET, "/api/reportes")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
+                // Catálogos
+                .requestMatchers(HttpMethod.GET, "/api/colegios/**", "/api/entidades-salud/**", "/api/policia/**")
+                    .hasAnyAuthority(DISC, DOC, RECT)
+                .requestMatchers("/api/colegios/**", "/api/entidades-salud/**", "/api/policia/**")
+                    .hasAuthority(DISC)
 
-                        // Reportes — crear y editar
-                        .requestMatchers(HttpMethod.POST, "/api/reportes")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.PUT, "/api/reportes/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-
-                        //  Reportes — ver detalle e implicados (todos los roles)
-                        .requestMatchers(HttpMethod.GET, "/api/reportes/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE",
-                                "ROLE_ESTUDIANTE", "ROLE_ACUDIENTE")
-
-                        //  Implicados — agregar
-                        .requestMatchers(HttpMethod.POST, "/api/reportes/*/implicados")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.DELETE, "/api/reportes/*/implicados/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
-
-                        // ── Colegios y catálogo
-                        .requestMatchers(HttpMethod.GET, "/api/colegios/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.GET, "/api/entidades-salud/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.PUT, "/api/entidades-salud/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
-                        .requestMatchers(HttpMethod.POST, "/api/entidades-salud/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
-                        .requestMatchers(HttpMethod.GET, "/api/policia/**")
-                        .hasAnyAuthority("ROLE_DISCIPLINA", "ROLE_DOCENTE")
-                        .requestMatchers(HttpMethod.PUT, "/api/policia/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
-                        .requestMatchers(HttpMethod.POST, "/api/policia/**")
-                        .hasAuthority("ROLE_DISCIPLINA")
-
-                        //  Cualquier otra petición requiere autenticación
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
+                .anyRequest().authenticated())
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
+    // Solo el frontend configurado puede llamar a la API desde un navegador (antes estaba abierto a cualquiera)
     @Bean
     public CorsConfigurationSource corsSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOrigins(Arrays.asList(corsOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(false);
-        config.setExposedHeaders(List.of("Authorization"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

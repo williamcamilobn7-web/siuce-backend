@@ -3,9 +3,11 @@ package com.colegio.entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+/**
+ * Institución educativa a la que pertenecen los estudiantes y el rector.
+ */
 @Document(collection = "colegios")
 public class Colegio {
-
     @Id
     private String id;
 

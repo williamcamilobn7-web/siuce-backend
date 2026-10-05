@@ -5,33 +5,35 @@ import com.colegio.repository.ColegioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Consulta y registro de colegios. Base URL: /api/colegios
+ */
 @RestController
 @RequestMapping("/api/colegios")
-@CrossOrigin(origins = "*")
 public class ColegioController {
 
     private final ColegioRepository colegioRepo;
 
-    public ColegioController(ColegioRepository colegioRepo) {
-        this.colegioRepo = colegioRepo;
-    }
+    public ColegioController(ColegioRepository colegioRepo) { this.colegioRepo = colegioRepo; }
 
+    /**
+     * GET /api/colegios - lista de colegios.
+     */
     @GetMapping
-    public ResponseEntity<List<Colegio>> listar() {
-        return ResponseEntity.ok(colegioRepo.findAll());
-    }
+    public ResponseEntity<List<Colegio>> listar() { return ResponseEntity.ok(colegioRepo.findAll()); }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> buscar(@PathVariable Long id) {
-        return colegioRepo.findById(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> buscar(@PathVariable String id) {
+        return colegioRepo.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * POST /api/colegios
+     * Body: { "nombre": "", "sede": "", "nit": "" }
+     */
     @PostMapping
     public ResponseEntity<?> crear(@RequestBody Map<String, String> body) {
         try {

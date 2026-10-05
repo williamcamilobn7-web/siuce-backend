@@ -4,71 +4,77 @@ import com.colegio.entity.Reporte;
 import com.colegio.service.ReporteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Reportes disciplinarios. Base URL: /api/reportes
+ * Los permisos de cada operación están definidos en SecurityConfig.
+ */
 @RestController
 @RequestMapping("/api/reportes")
-@CrossOrigin(origins = "*")
 public class ReporteController {
 
     private final ReporteService reporteService;
 
-    public ReporteController(ReporteService reporteService) {
-        this.reporteService = reporteService;
+    public ReporteController(ReporteService reporteService) { this.reporteService = reporteService; }
+
+    // Saca el rol (sin el prefijo ROLE_) del usuario autenticado
+    private String rolDe(Authentication auth) {
+        return auth.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
     }
 
-    // GET /api/reportes
+    /**
+     * GET /api/reportes - lista completa (solo personal del colegio).
+     */
     @GetMapping
-    public ResponseEntity<List<Reporte>> listarTodos() {
-        return ResponseEntity.ok(reporteService.listarTodos());
-    }
+    public ResponseEntity<List<Reporte>> listarTodos() { return ResponseEntity.ok(reporteService.listarTodos()); }
 
-    // GET /api/reportes/{id}
-    @GetMapping("/{id}")
-    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
-        return reporteService.buscarPorId(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-    }
-
-    // GET /api/reportes/estadisticas
+    /**
+     * GET /api/reportes/estadisticas - totales por tipo de falta y por grado, para el dashboard.
+     */
     @GetMapping("/estadisticas")
-    public ResponseEntity<Map<String, Object>> estadisticas() {
-        return ResponseEntity.ok(reporteService.estadisticas());
+    public ResponseEntity<Map<String, Object>> estadisticas() { return ResponseEntity.ok(reporteService.estadisticas()); }
+
+    /**
+     * GET /api/reportes/{id}
+     * El personal ve cualquier reporte; un estudiante o acudiente solo ve los reportes
+     * donde está implicado (si no, 403).
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<?> buscarPorId(@PathVariable String id, Authentication auth) {
+        if (!reporteService.puedeVer(auth.getName(), rolDe(auth), id))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No tienes acceso a este reporte"));
+        return reporteService.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     /**
      * POST /api/reportes
-     * Body: { "lugar": "Salon 203", "descripcionHecho": "..." }
-     * El sistema clasifica automaticamente el tipo (TIPO_I, TIPO_II, TIPO_III)
+     * Body: { "lugar": "...", "descripcionHecho": "...", "latitud": 10.4, "longitud": -75.5 }
+     * El tipo de falta (I, II o III) lo calcula el sistema a partir de la descripción;
+     * las coordenadas son opcionales pero ayudan a asignar la EPS y la policía más cercanas.
      */
     @PostMapping
     public ResponseEntity<?> crear(@RequestBody Map<String, Object> body) {
         try {
-            if (body.get("lugar") == null || body.get("descripcionHecho") == null) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("error", "lugar y descripcionHecho son obligatorios"));
-            }
-            Reporte nuevo = reporteService.crear(body);
-            return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
+            if (body.get("lugar") == null || body.get("descripcionHecho") == null)
+                return ResponseEntity.badRequest().body(Map.of("error", "lugar y descripcionHecho son obligatorios"));
+            return ResponseEntity.status(HttpStatus.CREATED).body(reporteService.crear(body));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", String.valueOf(e.getMessage())));
         }
     }
 
     /**
      * PUT /api/reportes/{id}
-     * Solo funciona si el reporte esta en estado PENDIENTE
+     * Solo funciona mientras el reporte esté PENDIENTE; si ya se firmó no se puede modificar.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizar(@PathVariable Long id,
-                                        @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> actualizar(@PathVariable String id, @RequestBody Map<String, Object> body) {
         try {
-            Reporte actualizado = reporteService.actualizar(id, body);
-            return ResponseEntity.ok(actualizado);
+            return ResponseEntity.ok(reporteService.actualizar(id, body));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (IllegalStateException e) {
@@ -78,10 +84,11 @@ public class ReporteController {
 
     /**
      * DELETE /api/reportes/{id}
-     * Solo se pueden eliminar reportes Tipo I o Tipo II
+     * Solo DISCIPLINA, y únicamente reportes Tipo I o II. Los Tipo III nunca se eliminan
+     * porque son evidencia de casos graves.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+    public ResponseEntity<?> eliminar(@PathVariable String id) {
         try {
             reporteService.eliminar(id);
             return ResponseEntity.ok(Map.of("mensaje", "Reporte eliminado correctamente"));
@@ -94,14 +101,13 @@ public class ReporteController {
 
     /**
      * POST /api/reportes/{id}/enviar-siuce
-     * Genera el JSON en formato SIUCE para reportes Tipo III
-     * Segun lo exige el MEN - Ley 1620 de 2013
+     * Genera el formato oficial del SIUCE (Ley 1620 de 2013) de un reporte Tipo III.
+     * Por ahora devuelve el formato listo para imprimir o reportar; no lo envía al Ministerio.
      */
     @PostMapping("/{id}/enviar-siuce")
-    public ResponseEntity<?> enviarSiuce(@PathVariable Long id) {
+    public ResponseEntity<?> enviarSiuce(@PathVariable String id) {
         try {
-            Map<String, Object> formatoSiuce = reporteService.generarFormatoSiuce(id);
-            return ResponseEntity.ok(formatoSiuce);
+            return ResponseEntity.ok(reporteService.generarFormatoSiuce(id));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (IllegalStateException e) {
@@ -111,14 +117,13 @@ public class ReporteController {
 
     /**
      * POST /api/reportes/{id}/firmar
-     * Firma digital del rector — cambia el estado a FIRMADO
-     * Solo aplica a reportes Tipo III
+     * Firma del rector (solo ROLE_RECTOR) sobre un reporte Tipo III. El estado pasa a FIRMADO
+     * y se guarda el nombre de quien firmó.
      */
     @PostMapping("/{id}/firmar")
-    public ResponseEntity<?> firmar(@PathVariable Long id) {
+    public ResponseEntity<?> firmar(@PathVariable String id, Authentication auth) {
         try {
-            Reporte firmado = reporteService.firmar(id);
-            return ResponseEntity.ok(firmado);
+            return ResponseEntity.ok(reporteService.firmar(id, auth.getName()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (IllegalStateException e) {
