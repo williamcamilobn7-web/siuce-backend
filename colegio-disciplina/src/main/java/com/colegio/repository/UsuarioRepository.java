@@ -6,4 +6,7 @@ import java.util.Optional;
 
 public interface UsuarioRepository extends MongoRepository<Usuario, String> {
     Optional<Usuario> findByUsername(String username);
+
+    // Para vincular la cuenta de Google con el usuario del sistema (se compara sin importar mayúsculas)
+    Optional<Usuario> findByEmailIgnoreCase(String email);
 }

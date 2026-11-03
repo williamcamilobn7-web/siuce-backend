@@ -28,6 +28,11 @@ public class Usuario {
     // tokens que todavía no vencen.
     private Instant tokensValidosDesde;
 
+        // Correo vinculado para entrar con Google o GitHub. Solo entra quien YA tiene un usuario con ese correo.
+    // El índice es único y "sparse" para que los usuarios sin correo no choquen entre sí.
+    @Indexed(unique = true, sparse = true)
+    private String email;
+
     public Usuario() {}
 
     public String getId() { return id; }
@@ -40,6 +45,8 @@ public class Usuario {
     public void setRol(String rol) { this.rol = rol; }
     public String getNombreCompleto() { return nombreCompleto; }
     public void setNombreCompleto(String nombreCompleto) { this.nombreCompleto = nombreCompleto; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
     public String getEstudianteId() { return estudianteId; }
     public void setEstudianteId(String estudianteId) { this.estudianteId = estudianteId; }
     public String getAcudienteId() { return acudienteId; }

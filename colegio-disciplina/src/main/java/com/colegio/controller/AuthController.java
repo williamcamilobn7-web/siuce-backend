@@ -86,7 +86,6 @@ public class AuthController {
     /**
      * POST /api/auth/renovar
      * Cambia el token vigente por uno nuevo, para que el usuario no sea sacado a mitad de trabajo.
-     * El frontend puede llamarlo poco antes de que se cumplan los 30 minutos.
      */
     @PostMapping("/renovar")
     public ResponseEntity<?> renovar(HttpServletRequest req) {
@@ -134,6 +133,33 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("mensaje", "Sesiones de " + username + " cerradas"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * GET /api/auth/me
+     * Devuelve el nombre, el rol y los reportes del usuario con sesión iniciada.
+     * Lo usa el frontend después de entrar con Google, porque en ese caso
+     * solo recibe el token y todavía no conoce los datos del usuario.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<?> me(Authentication auth) {
+        return ResponseEntity.ok(authService.perfil(auth.getName()));
+    }
+
+    /**
+     * PUT /api/auth/usuarios/{username}/email
+     * Body: { "email": "persona@gmail.com" }   (vacío para desvincular)
+     * Lo usa DISCIPLINA para decidir qué correo de Google puede entrar a cada cuenta.
+     */
+    @PutMapping("/usuarios/{username}/email")
+    public ResponseEntity<?> vincularEmail(@PathVariable String username, @RequestBody Map<String, Object> body) {
+        try {
+            authService.vincularEmail(username, body.get("email"));
+            return ResponseEntity.ok(Map.of("mensaje", "Correo actualizado"));
+        } catch (IllegalArgumentException e) {
+            if ("Usuario no encontrado".equals(e.getMessage())) return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }

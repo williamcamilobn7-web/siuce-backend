@@ -3,8 +3,15 @@ package com.colegio.service;
 import com.colegio.entity.*;
 import com.colegio.repository.*;
 import com.colegio.security.JwtUtil;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -109,7 +116,7 @@ public class AuthService {
         return construirRespuesta(usuario);
     }
 
-    public Map<String, Object> registrar(Map<String, Object> body) {
+      public Map<String, Object> registrar(Map<String, Object> body) {
         String username = (String) body.get("username");
         String password = (String) body.get("password");
         String rol = body.get("rol") == null ? null : body.get("rol").toString().toUpperCase();
@@ -117,9 +124,13 @@ public class AuthService {
         if (password == null || password.length() < 8) throw new IllegalArgumentException("La contraseña debe tener mínimo 8 caracteres");
         if (rol == null || !ROLES.contains(rol)) throw new IllegalArgumentException("Rol inválido. Use: " + ROLES);
         if (usuarioRepo.findByUsername(username).isPresent()) throw new IllegalArgumentException("El username ya existe");
+        String email = normalizarEmail(body.get("email"));
+        if (email != null && usuarioRepo.findByEmailIgnoreCase(email).isPresent())
+            throw new IllegalArgumentException("Ese correo ya está vinculado a otro usuario");
 
         Usuario u = new Usuario();
         u.setUsername(username);
+        u.setEmail(email);
         u.setPassword(passwordEncoder.encode(password));
         u.setRol(rol);
         u.setNombreCompleto((String) body.get("nombreCompleto"));
@@ -182,6 +193,62 @@ public class AuthService {
         u.setTokensValidosDesde(Instant.now());
         usuarioRepo.save(u);
     }
+        // ───────────── Inicio de sesión con Google / GitHub (OAuth2) ─────────────
+
+    /**
+     * Se llama cuando Google o GitHub ya confirmaron quién es la persona.
+     * Regla de seguridad: NO se crean cuentas nuevas. Solo entra quien ya tiene un usuario
+     * en el sistema con ese mismo correo (y el proveedor debe haberlo verificado).
+     * Si no, cualquier persona con una cuenta de Google podría entrar al colegio.
+     * Devuelve nuestro propio token JWT; el rol sale de la base de datos.
+     */
+    public String loginConOAuth(String proveedor, String email, boolean emailVerificado, String ip) {
+        String etiqueta = proveedor + ":" + (email == null ? "sin-correo" : email);
+        if (email == null || !emailVerificado) {
+            registrarIntento(etiqueta, false, ip);
+            throw new IllegalArgumentException("email_no_verificado");
+        }
+        Optional<Usuario> opt = usuarioRepo.findByEmailIgnoreCase(email);
+        if (opt.isEmpty()) {
+            registrarIntento(etiqueta, false, ip);
+            throw new IllegalArgumentException("cuenta_no_vinculada");
+        }
+        Usuario u = opt.get();
+        registrarIntento(u.getUsername(), true, ip);
+        return jwtUtil.generateToken(u.getUsername(), u.getRol());
+    }
+
+    /** Datos del usuario que inició sesión (lo mismo que devuelve el login, pero sin token). */
+    public Map<String, Object> perfil(String username) {
+        Usuario u = usuarioRepo.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        Map<String, Object> resp = construirRespuesta(u);
+        resp.remove("token");
+        return resp;
+    }
+
+    /** El coordinador vincula (o desvincula, con correo vacío) el correo de un usuario. */
+    public void vincularEmail(String username, Object emailCrudo) {
+        Usuario u = usuarioRepo.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        String email = normalizarEmail(emailCrudo);
+        if (email != null) {
+            Optional<Usuario> otro = usuarioRepo.findByEmailIgnoreCase(email);
+            if (otro.isPresent() && !otro.get().getUsername().equals(username))
+                throw new IllegalArgumentException("Ese correo ya está vinculado a otro usuario");
+        }
+        u.setEmail(email);
+        usuarioRepo.save(u);
+    }
+
+    // Deja el correo en minúsculas y sin espacios; vacío = null; si no parece un correo, error
+    private String normalizarEmail(Object crudo) {
+        if (crudo == null) return null;
+        String e = crudo.toString().trim().toLowerCase();
+        if (e.isEmpty()) return null;
+        if (!e.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) throw new IllegalArgumentException("Correo inválido");
+        return e;
+    }
 
     // ───────────── Helpers ─────────────
 
@@ -239,4 +306,6 @@ public class AuthService {
         }
         return out;
     }
+   
+
 }

@@ -1,5 +1,6 @@
 package com.colegio.security;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -32,15 +34,21 @@ public class SecurityConfig {
     private static final String ACU  = "ROLE_ACUDIENTE";
 
     private final JwtFilter jwtFilter;
+    private final OAuth2SuccessHandler oauthExito;
+    private final OAuth2FailureHandler oauthFallo;
+    // Solo existe si hay credenciales de Google/GitHub configuradas (archivo oauth.properties)
+    private final ObjectProvider<ClientRegistrationRepository> oauthClientes;
 
     @Value("${app.cors.origins:http://localhost:4200}")
     private String corsOrigins;
 
-    public SecurityConfig(JwtFilter jwtFilter) { this.jwtFilter = jwtFilter; }
-
-    // BCrypt: hash de una sola vía con sal, resistente a fuerza bruta (requisito RS-002)
-    @Bean
-    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    public SecurityConfig(JwtFilter jwtFilter, OAuth2SuccessHandler oauthExito, OAuth2FailureHandler oauthFallo,
+                          ObjectProvider<ClientRegistrationRepository> oauthClientes) {
+        this.jwtFilter = jwtFilter;
+        this.oauthExito = oauthExito;
+        this.oauthFallo = oauthFallo;
+        this.oauthClientes = oauthClientes;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -53,13 +61,18 @@ public class SecurityConfig {
             // Sin token o con token inválido se responde 401 (por defecto Spring respondería 403)
             .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401, "No autenticado")))
             .authorizeHttpRequests(auth -> auth
-                // Orden de las reglas: lo público primero y al final "cualquier otra cosa requiere login"
+                // Orden de las reglas: lo público primero y al final "cualquier otra cosa se bloquea"
                 // Público
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/login-estudiante").permitAll()
                 .requestMatchers("/", "/index.html", "/*.js", "/*.css").permitAll()
+                // /error: para que los errores reales lleguen al cliente y no como un 401 mudo
+                .requestMatchers("/error").permitAll()
+                // Rutas del inicio de sesión con Google/GitHub (las atiende Spring Security)
+                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                 // Solo personal de disciplina crea usuarios
                 .requestMatchers("/api/auth/registro").hasAuthority(DISC)
                 .requestMatchers("/api/auth/usuarios/*/cerrar-sesiones").hasAuthority(DISC)
+                .requestMatchers("/api/auth/usuarios/*/email").hasAuthority(DISC)
 
                 .requestMatchers("/api/carga-masiva/**").hasAuthority(DISC)
                 .requestMatchers(HttpMethod.POST, "/api/acudientes/carga-masiva").hasAuthority(DISC)
@@ -80,8 +93,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/reportes").hasAnyAuthority(DISC, DOC)
                 .requestMatchers(HttpMethod.POST, "/api/reportes/*/implicados").hasAnyAuthority(DISC, DOC)
 
-                // Ojo: en el detalle de un reporte entran también estudiantes y acudientes, pero el controller
-                // verifica que solo vean los reportes donde están implicados
                 // Reportes: lectura
                 .requestMatchers(HttpMethod.GET, "/api/reportes/estadisticas").hasAnyAuthority(DISC, DOC, RECT)
                 .requestMatchers(HttpMethod.GET, "/api/reportes").hasAnyAuthority(DISC, DOC, RECT)
@@ -95,8 +106,19 @@ public class SecurityConfig {
                 .requestMatchers("/api/colegios/**", "/api/entidades-salud/**", "/api/policia/**")
                     .hasAuthority(DISC)
 
-                .anyRequest().authenticated())
+                // Cualquier usuario con sesión: ver sus datos, cerrar/renovar sesión y cambiar su clave
+                .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/auth/logout", "/api/auth/renovar",
+                        "/api/auth/cambiar-password", "/api/auth/logout-todas").authenticated()
+
+                // Lo que no tenga una regla explícita se bloquea: un endpoint nuevo nunca queda abierto por olvido
+                .anyRequest().denyAll())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // Login con Google/GitHub: solo se activa si hay credenciales configuradas (si no, el sistema sigue igual)
+        if (oauthClientes.getIfAvailable() != null) {
+            http.oauth2Login(o -> o.successHandler(oauthExito).failureHandler(oauthFallo));
+        }
         return http.build();
     }
 
