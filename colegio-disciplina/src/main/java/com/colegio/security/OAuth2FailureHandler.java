@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * Se ejecuta si el proveedor (Google o GitHub) falla o la persona cancela el inicio de sesión.
+ * Se ejecuta si el proveedor (Google) falla o la persona cancela el inicio de sesión.
  * Devuelve al usuario a la pantalla del frontend con un código de error.
  */
 @Component

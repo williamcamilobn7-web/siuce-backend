@@ -37,22 +37,19 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        String header = request.getHeader("Authorization");
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
-            if (jwtUtil.validateToken(token) && !revocadoRepo.existsById(jwtUtil.extractJti(token))) {
-                usuarioRepo.findByUsername(jwtUtil.extractUsername(token)).ifPresent(u -> {
-                    // El claim "iat" se guarda en segundos, por eso se compara contra la fecha truncada a segundos
-                    boolean emitidoDespues = u.getTokensValidosDesde() == null ||
-                            !jwtUtil.extractIssuedAt(token).isBefore(u.getTokensValidosDesde().truncatedTo(ChronoUnit.SECONDS));
-                    if (emitidoDespues) {
-                        var auth = new UsernamePasswordAuthenticationToken(
-                                u.getUsername(), null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + u.getRol())));
-                        SecurityContextHolder.getContext().setAuthentication(auth);
-                    }
-                });
-            }
+        String token = JwtCookieService.leerToken(request);
+        if (token != null && jwtUtil.validateToken(token) && !revocadoRepo.existsById(jwtUtil.extractJti(token))) {
+            usuarioRepo.findByUsername(jwtUtil.extractUsername(token)).ifPresent(u -> {
+                // El claim "iat" se guarda en segundos, por eso se compara contra la fecha truncada a segundos
+                boolean emitidoDespues = u.getTokensValidosDesde() == null ||
+                        !jwtUtil.extractIssuedAt(token).isBefore(u.getTokensValidosDesde().truncatedTo(ChronoUnit.SECONDS));
+                if (emitidoDespues) {
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            u.getUsername(), null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + u.getRol())));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
+            });
         }
         // Si no se autenticó nada, Spring responde 401 más adelante (ver SecurityConfig)
         chain.doFilter(request, response);

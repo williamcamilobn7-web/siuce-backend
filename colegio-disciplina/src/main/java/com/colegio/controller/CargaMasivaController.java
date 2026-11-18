@@ -31,4 +31,19 @@ public class CargaMasivaController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+        /**
+     * POST /api/carga-masiva/vinculos
+     * Recibe un CSV con las columnas documentoEstudiante y documentoAcudiente en el campo "archivo"
+     * y conecta cada estudiante (que ya debe existir) con su acudiente. Devuelve cuántos vinculó
+     * y cuántos documentos no encontró.
+     */
+    @PostMapping("/vinculos")
+    public ResponseEntity<?> vincularAcudientes(@RequestParam("archivo") MultipartFile archivo) {
+        try {
+            return ResponseEntity.ok(cargaMasivaService.vincularAcudientes(archivo));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

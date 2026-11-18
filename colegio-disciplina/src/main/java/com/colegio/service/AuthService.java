@@ -193,10 +193,10 @@ public class AuthService {
         u.setTokensValidosDesde(Instant.now());
         usuarioRepo.save(u);
     }
-        // ───────────── Inicio de sesión con Google / GitHub (OAuth2) ─────────────
+        // ───────────── Inicio de sesión con Google (OAuth2) ─────────────
 
     /**
-     * Se llama cuando Google o GitHub ya confirmaron quién es la persona.
+     * Se llama cuando Google ya confirmaron quién es la persona.
      * Regla de seguridad: NO se crean cuentas nuevas. Solo entra quien ya tiene un usuario
      * en el sistema con ese mismo correo (y el proveedor debe haberlo verificado).
      * Si no, cualquier persona con una cuenta de Google podría entrar al colegio.
@@ -209,11 +209,27 @@ public class AuthService {
             throw new IllegalArgumentException("email_no_verificado");
         }
         Optional<Usuario> opt = usuarioRepo.findByEmailIgnoreCase(email);
-        if (opt.isEmpty()) {
-            registrarIntento(etiqueta, false, ip);
-            throw new IllegalArgumentException("cuenta_no_vinculada");
+        Usuario u;
+        if (opt.isPresent()) {
+            u = opt.get();
+        } else {
+            // Si no existe como usuario general, buscamos si es un acudiente registrado en el colegio
+            Optional<Acudiente> optAcu = acudienteRepo.findByEmailIgnoreCase(email);
+            if (optAcu.isPresent()) {
+                Acudiente acu = optAcu.get();
+                Usuario nuevo = new Usuario();
+                nuevo.setUsername(email);
+                nuevo.setEmail(email);
+                nuevo.setNombreCompleto(acu.getNombreCompleto());
+                nuevo.setRol("ACUDIENTE");
+                nuevo.setAcudienteId(acu.getId());
+                nuevo.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                u = usuarioRepo.save(nuevo);
+            } else {
+                registrarIntento(etiqueta, false, ip);
+                throw new IllegalArgumentException("cuenta_no_vinculada");
+            }
         }
-        Usuario u = opt.get();
         registrarIntento(u.getUsername(), true, ip);
         return jwtUtil.generateToken(u.getUsername(), u.getRol());
     }

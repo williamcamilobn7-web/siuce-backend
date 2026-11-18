@@ -1,3 +1,7 @@
 oauth.properties
+**/oauth.properties
 target/
+**/target/
 .idea/
+**/.idea/
+*.class

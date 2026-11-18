@@ -79,7 +79,30 @@ public class ReporteService {
         reporte.setEstado("PENDIENTE");
 
         if ("TIPO_III".equals(tipo)) asignarEntidades(reporte);
-        return reporteRepo.save(reporte);
+        Reporte guardado = reporteRepo.save(reporte);
+
+        if (body.get("implicados") instanceof List<?> list) {
+            for (Object obj : list) {
+                if (obj instanceof Map<?, ?> impMap) {
+                    Object estIdObj = impMap.get("estudianteId");
+                    Object rolObj = impMap.get("rol");
+                    if (estIdObj != null && rolObj != null) {
+                        String estId = estIdObj.toString();
+                        estudianteRepo.findById(estId).ifPresent(est -> {
+                            Implicado imp = new Implicado();
+                            imp.setReporteId(guardado.getId());
+                            imp.setEstudianteId(est.getId());
+                            imp.setRol(rolObj.toString().toUpperCase());
+                            Object acuIdObj = impMap.get("acudienteId");
+                            String acuId = acuIdObj != null ? acuIdObj.toString() : "";
+                            imp.setAcudienteId(acuId.isBlank() ? est.getAcudienteId() : acuId);
+                            implicadoRepo.save(imp);
+                        });
+                    }
+                }
+            }
+        }
+        return guardado;
     }
 
     /**

@@ -36,7 +36,7 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final OAuth2SuccessHandler oauthExito;
     private final OAuth2FailureHandler oauthFallo;
-    // Solo existe si hay credenciales de Google/GitHub configuradas (archivo oauth.properties)
+    // Solo existe si hay credenciales de Google configuradas (archivo oauth.properties)
     private final ObjectProvider<ClientRegistrationRepository> oauthClientes;
 
     @Value("${app.cors.origins:http://localhost:4200}")
@@ -129,7 +129,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(Arrays.asList(corsOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setAllowCredentials(false);
+        config.setAllowCredentials(true);   // necesario para que el navegador envíe y reciba la cooki
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

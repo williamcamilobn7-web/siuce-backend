@@ -1,5 +1,6 @@
 package com.colegio.service;
 
+import com.colegio.entity.Acudiente;
 import com.colegio.entity.Estudiante;
 import com.colegio.repository.*;
 import org.springframework.stereotype.Service;
@@ -12,8 +13,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Carga masiva de estudiantes desde CSV. Las columnas se buscan por nombre en el encabezado,
- * así el orden de las columnas del archivo no importa.
+ * Cargas masivas desde CSV: estudiantes y vínculos estudiante-acudiente.
+ * Las columnas se buscan por nombre en el encabezado, así el orden de las columnas no importa.
  */
 @Service
 public class CargaMasivaService {
@@ -90,6 +91,10 @@ public class CargaMasivaService {
                     if (!colegioId.isEmpty() && colegioRepo.existsById(colegioId)) e.setColegioId(colegioId);
                     String acudienteId = get(cols, idx, "acudienteid");
                     if (!acudienteId.isEmpty() && acudienteRepo.existsById(acudienteId)) e.setAcudienteId(acudienteId);
+                    // También se puede enlazar con el DOCUMENTO del acudiente (el acudiente ya debe estar cargado)
+                    String docAcudiente = get(cols, idx, "acudientedocumento");
+                    if (!docAcudiente.isEmpty())
+                        acudienteRepo.findFirstByNumeroDocumento(docAcudiente).ifPresent(a -> e.setAcudienteId(a.getId()));
 
                     lote.add(e);
                     if (lote.size() >= LOTE) {
@@ -118,7 +123,6 @@ public class CargaMasivaService {
         return resultado;
     }
 
-    /** Guarda el lote omitiendo documentos que ya existen. Devuelve cuántos guardó. */
     /**
      * Guarda el lote saltándose los documentos que ya existen en la base.
      * Devuelve cuántos guardó realmente.
@@ -131,6 +135,91 @@ public class CargaMasivaService {
                 .filter(e -> !existentes.contains(e.getNumeroDocumento())).toList();
         estudianteRepo.saveAll(nuevos);
         return nuevos.size();
+    }
+
+    /**
+     * Conecta estudiantes que YA existen con sus acudientes, usando los números de documento.
+     * El CSV debe tener las columnas documentoEstudiante y documentoAcudiente (el orden no importa).
+     * No crea nada: solo llena el campo acudienteId de cada estudiante.
+     */
+    public Map<String, Object> vincularAcudientes(MultipartFile archivo) throws Exception {
+        int vinculados = 0, sinEstudiante = 0, sinAcudiente = 0, errores = 0;
+        List<String> mensajesError = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(archivo.getInputStream(), StandardCharsets.UTF_8))) {
+
+            String headerLine = reader.readLine();
+            if (headerLine == null) throw new Exception("El archivo está vacío");
+            if (headerLine.startsWith("\uFEFF")) headerLine = headerLine.substring(1);
+
+            Map<String, Integer> idx = new HashMap<>();
+            String[] headers = headerLine.split(",");
+            for (int i = 0; i < headers.length; i++) idx.put(headers[i].trim().toLowerCase(), i);
+            if (!idx.containsKey("documentoestudiante") || !idx.containsKey("documentoacudiente"))
+                throw new Exception("El archivo debe tener las columnas documentoEstudiante y documentoAcudiente");
+
+            List<String[]> lote = new ArrayList<>();   // cada elemento es un par {documentoEstudiante, documentoAcudiente}
+            String linea;
+            int fila = 1;
+            while ((linea = reader.readLine()) != null) {
+                fila++;
+                if (linea.trim().isEmpty()) continue;
+                String[] cols = linea.split(",", -1);
+                String docEst = get(cols, idx, "documentoestudiante");
+                String docAcu = get(cols, idx, "documentoacudiente");
+                if (docEst.isEmpty() || docAcu.isEmpty()) {
+                    errores++;
+                    if (mensajesError.size() < 50) mensajesError.add("Fila " + fila + ": falta un documento");
+                    continue;
+                }
+                lote.add(new String[]{docEst, docAcu});
+                if (lote.size() >= LOTE) {
+                    int[] r = procesarVinculos(lote);
+                    vinculados += r[0]; sinEstudiante += r[1]; sinAcudiente += r[2];
+                    lote.clear();
+                }
+            }
+            if (!lote.isEmpty()) {
+                int[] r = procesarVinculos(lote);
+                vinculados += r[0]; sinEstudiante += r[1]; sinAcudiente += r[2];
+            }
+        }
+
+        Map<String, Object> resultado = new LinkedHashMap<>();
+        resultado.put("vinculados", vinculados);
+        resultado.put("estudiantesNoEncontrados", sinEstudiante);
+        resultado.put("acudientesNoEncontrados", sinAcudiente);
+        resultado.put("errores", errores);
+        resultado.put("detalleErrores", mensajesError);
+        return resultado;
+    }
+
+    /** Procesa un lote de pares. Devuelve {vinculados, estudiantesNoEncontrados, acudientesNoEncontrados}. */
+    private int[] procesarVinculos(List<String[]> lote) {
+        Set<String> docsEst = lote.stream().map(p -> p[0]).collect(Collectors.toSet());
+        Set<String> docsAcu = lote.stream().map(p -> p[1]).collect(Collectors.toSet());
+
+        // Se traen de una vez los estudiantes y acudientes del lote, en vez de buscar uno por uno
+        Map<String, Estudiante> estudiantes = new HashMap<>();
+        for (Estudiante e : estudianteRepo.findByNumeroDocumentoIn(docsEst)) estudiantes.put(e.getNumeroDocumento(), e);
+        Map<String, Acudiente> acudientes = new HashMap<>();
+        // putIfAbsent: si un documento de acudiente estuviera repetido, se usa el primero
+        for (Acudiente a : acudienteRepo.findByNumeroDocumentoIn(docsAcu)) acudientes.putIfAbsent(a.getNumeroDocumento(), a);
+
+        int vinculados = 0, sinEst = 0, sinAcu = 0;
+        List<Estudiante> aGuardar = new ArrayList<>();
+        for (String[] par : lote) {
+            Estudiante e = estudiantes.get(par[0]);
+            Acudiente a = acudientes.get(par[1]);
+            if (e == null) { sinEst++; continue; }
+            if (a == null) { sinAcu++; continue; }
+            e.setAcudienteId(a.getId());   // aquí se crea el vínculo
+            aGuardar.add(e);
+            vinculados++;
+        }
+        estudianteRepo.saveAll(aGuardar);
+        return new int[]{vinculados, sinEst, sinAcu};
     }
 
     private String get(String[] cols, Map<String, Integer> idx, String key) {

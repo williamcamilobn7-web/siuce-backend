@@ -28,7 +28,7 @@ public class Usuario {
     // tokens que todavía no vencen.
     private Instant tokensValidosDesde;
 
-        // Correo vinculado para entrar con Google o GitHub. Solo entra quien YA tiene un usuario con ese correo.
+    // Correo vinculado para entrar con Google. Solo entra quien YA tiene un usuario con ese correo.
     // El índice es único y "sparse" para que los usuarios sin correo no choquen entre sí.
     @Indexed(unique = true, sparse = true)
     private String email;
