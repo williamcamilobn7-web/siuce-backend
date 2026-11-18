@@ -1,4 +1,4 @@
-package com.colegio.exception;
+package com.colegio.security;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
