@@ -2,7 +2,7 @@ const fs = require('fs');
 const { MongoClient } = require('mongodb');
 
 // Pega aquí la URI de MongoDB Atlas de tu compañero
-const MONGO_URI = "mongodb+srv://siuce_user:Colegio12345@colegiodisciplina.8rtd6lr.mongodb.net/colegio_disciplina?retryWrites=true&w=majority;
+const MONGO_URI = "mongodb+srv://USUARIO:PASSWORD@CLUSTER.mongodb.net/?retryWrites=true&w=majority";
 const NOMBRE_BD = "colegio_disiplina";
 
 async function importar() {
@@ -20,7 +20,7 @@ async function importar() {
 
     if (estudiantes.length > 0) {
       const resEst = await db.collection("estudiantes").insertMany(estudiantes);
-      console.log(Insertados ${resEst.insertedCount} documentos en 'estudiantes'.);
+      console.log(`Insertados ${resEst.insertedCount} documentos en 'estudiantes'.`);
     }
 
     // 2. Importar Acudientes
@@ -28,7 +28,7 @@ async function importar() {
 
     if (acudientes.length > 0) {
       const resAcu = await db.collection("acudientes").insertMany(acudientes);
-      console.log(Insertados ${resAcu.insertedCount} documentos en 'acudientes'.);
+      console.log(`Insertados ${resAcu.insertedCount} documentos en 'acudientes'.`);
     }
   } finally {
     await client.close();

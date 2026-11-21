@@ -67,19 +67,19 @@ for (let i = 0; i < CANTIDAD; i++) {
   // --- Generar Acudiente ---
   const nomAcu = aleatorio([...NOMBRES_M, ...NOMBRES_F]);
   const apeAcu = aleatorio(APELLIDOS).split(" ")[0];
-  const nombreCompleto = ${nomAcu} ${apeAcu};
-  const correoBase = ${nomAcu}.${apeAcu}${i + 1}
+  const nombreCompleto = `${nomAcu} ${apeAcu}`;
+  const correoBase = `${nomAcu}.${apeAcu}${i + 1}`
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
   const prefijoTel = aleatorio(["300", "301", "310", "311", "312", "315", "320", "321"]);
-  const telefono = ${prefijoTel}${enteroAleatorio(1000000, 9999999)};
+  const telefono = `${prefijoTel}${enteroAleatorio(1000000, 9999999)}`;
 
   acudientes.push({
     nombreCompleto,
     telefono,
-    email: ${correoBase}@gmail.com,
+    email: `${correoBase}@gmail.com`,
     notificado: Math.random() < 0.5,
     _class: "com.colegio.entity.Acudiente"
   });
@@ -88,4 +88,4 @@ for (let i = 0; i < CANTIDAD; i++) {
 fs.writeFileSync("estudiantes.json", JSON.stringify(estudiantes, null, 2), "utf-8");
 fs.writeFileSync("acudientes.json", JSON.stringify(acudientes, null, 2), "utf-8");
 
-console.log(Generados ${estudiantes.length} estudiantes y ${acudientes.length} acudientes.);
+console.log(`Generados ${estudiantes.length} estudiantes y ${acudientes.length} acudientes.`);
