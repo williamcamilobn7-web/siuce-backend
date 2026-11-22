@@ -24,13 +24,22 @@ public class MigracionController {
 
     private final EstudianteRepository estudianteRepo;
     private final AcudienteRepository acudienteRepo;
+    private final ReporteRepository reporteRepo;
+    private final ImplicadoRepository implicadoRepo;
+    private final UsuarioRepository usuarioRepo;
     private final MongoTemplate mongoTemplate;
 
     public MigracionController(EstudianteRepository estudianteRepo,
                                 AcudienteRepository acudienteRepo,
+                                ReporteRepository reporteRepo,
+                                ImplicadoRepository implicadoRepo,
+                                UsuarioRepository usuarioRepo,
                                 MongoTemplate mongoTemplate) {
         this.estudianteRepo = estudianteRepo;
         this.acudienteRepo  = acudienteRepo;
+        this.reporteRepo    = reporteRepo;
+        this.implicadoRepo  = implicadoRepo;
+        this.usuarioRepo    = usuarioRepo;
         this.mongoTemplate  = mongoTemplate;
     }
 
@@ -136,6 +145,82 @@ public class MigracionController {
             return ResponseEntity.ok(Map.of(
                 "matched", result.getMatchedCount(),
                 "modified", result.getModifiedCount()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** POST /api/migracion/preparar-acudiente?clave=XXX&email=XXX — Enlaza acudiente con reportes y asigna el email */
+    @PostMapping("/preparar-acudiente")
+    public ResponseEntity<?> prepararAcudiente(@RequestParam String clave,
+                                               @RequestParam String email) {
+        ResponseEntity<?> err = validarClave(clave);
+        if (err != null) return err;
+        try {
+            String correoNorm = email.trim().toLowerCase();
+
+            // 1. Limpiar el email de cualquier usuario que NO sea acudiente (ej: disciplina) para evitar choques
+            usuarioRepo.findByEmailIgnoreCase(correoNorm).ifPresent(u -> {
+                if (!"ACUDIENTE".equals(u.getRol())) {
+                    u.setEmail(null);
+                    usuarioRepo.save(u);
+                }
+            });
+
+            // 2. Obtener un reporte
+            List<Reporte> reportes = reporteRepo.findAll();
+            if (reportes.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "No hay reportes en la base de datos"));
+            }
+            Reporte rep = reportes.get(0);
+
+            // 3. Obtener un estudiante y un acudiente
+            List<Estudiante> estudiantes = estudianteRepo.findAll();
+            if (estudiantes.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "No hay estudiantes en la base de datos"));
+            }
+            Estudiante est = estudiantes.get(0);
+
+            List<Acudiente> acudientes = acudienteRepo.findAll();
+            if (acudientes.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "No hay acudientes en la base de datos"));
+            }
+            Acudiente acu = acudientes.get(0);
+
+            // 4. Asignar el email al acudiente y guardar
+            acu.setEmail(correoNorm);
+            acudienteRepo.save(acu);
+
+            // 5. Vincular estudiante con este acudiente
+            est.setAcudienteId(acu.getId());
+            estudianteRepo.save(est);
+
+            // 6. Asegurar un Implicado que conecte el reporte con el estudiante y el acudiente
+            List<Implicado> imps = implicadoRepo.findByReporteId(rep.getId());
+            Implicado imp;
+            if (imps.isEmpty()) {
+                imp = new Implicado();
+                imp.setReporteId(rep.getId());
+                imp.setEstudianteId(est.getId());
+                imp.setAcudienteId(acu.getId());
+                imp.setRol("VICTIMA");
+            } else {
+                imp = imps.get(0);
+                imp.setEstudianteId(est.getId());
+                imp.setAcudienteId(acu.getId());
+            }
+            implicadoRepo.save(imp);
+
+            return ResponseEntity.ok(Map.of(
+                "mensaje", "Acudiente preparado exitosamente con reportes vinculados",
+                "acudienteId", acu.getId(),
+                "acudienteNombre", acu.getNombreCompleto(),
+                "acudienteEmail", acu.getEmail(),
+                "estudianteNombre", est.getNombres() + " " + est.getApellidos(),
+                "reporteId", rep.getId(),
+                "tipoFalta", rep.getTipoFalta() != null ? rep.getTipoFalta() : "TIPO_I",
+                "estadoReporte", rep.getEstado() != null ? rep.getEstado() : "PENDIENTE"
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
