@@ -196,10 +196,11 @@ public class AuthService {
         // ───────────── Inicio de sesión con Google (OAuth2) ─────────────
 
     /**
-     * Se llama cuando Google ya confirmaron quién es la persona.
-     * Regla de seguridad: NO se crean cuentas nuevas. Solo entra quien ya tiene un usuario
-     * en el sistema con ese mismo correo (y el proveedor debe haberlo verificado).
-     * Si no, cualquier persona con una cuenta de Google podría entrar al colegio.
+     * Se llama cuando Google ya confirmó quién es la persona.
+     * Regla de seguridad: no se crean cuentas para cualquier persona.
+     * Solo entran usuarios ya registrados en el sistema, o acudientes cuyo
+     * correo ya esté en la colección de acudientes del colegio.
+     * Si el correo no coincide con ninguno de los dos, se rechaza.
      * Devuelve nuestro propio token JWT; el rol sale de la base de datos.
      */
     public String loginConOAuth(String proveedor, String email, boolean emailVerificado, String ip) {

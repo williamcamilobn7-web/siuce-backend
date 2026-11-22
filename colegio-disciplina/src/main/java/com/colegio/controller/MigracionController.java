@@ -117,4 +117,27 @@ public class MigracionController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    /** PUT /api/migracion/actualizar?clave=XXX&coleccion=nombre&id=XXX — actualiza un campo de un documento */
+    @PutMapping("/actualizar")
+    public ResponseEntity<?> actualizar(@RequestParam String clave,
+                                         @RequestParam String coleccion,
+                                         @RequestParam String id,
+                                         @RequestBody Map<String, Object> campos) {
+        ResponseEntity<?> err = validarClave(clave);
+        if (err != null) return err;
+        try {
+            org.springframework.data.mongodb.core.query.Query query =
+                new org.springframework.data.mongodb.core.query.Query(
+                    org.springframework.data.mongodb.core.query.Criteria.where("_id").is(id));
+            org.bson.Document updateDoc = new org.bson.Document("$set", new org.bson.Document(campos));
+            com.mongodb.client.result.UpdateResult result =
+                mongoTemplate.getCollection(coleccion).updateOne(query.getQueryObject(), updateDoc);
+            return ResponseEntity.ok(Map.of(
+                "matched", result.getMatchedCount(),
+                "modified", result.getModifiedCount()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }
