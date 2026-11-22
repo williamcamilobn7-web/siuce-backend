@@ -1,0 +1,1 @@
+{"_id": {"$oid": "6ac40411e96abf315fb2d15b"}, "nombreCompleto": "Ana Maria Rojas", "email": "rectora@sanjose.edu.co", "colegioId": "6ac40411e96abf315fb2d15a", "_class": "com.colegio.entity.Rector"}

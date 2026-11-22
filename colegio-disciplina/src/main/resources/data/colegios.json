@@ -1,0 +1,1 @@
+{"_id": {"$oid": "6ac40411e96abf315fb2d15a"}, "nombre": "Institucion Educativa San Jose", "sede": "Sede Principal", "nit": "890123456-1", "_class": "com.colegio.entity.Colegio"}

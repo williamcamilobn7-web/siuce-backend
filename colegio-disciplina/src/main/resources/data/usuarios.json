@@ -1,0 +1,3 @@
+{"_id": {"$oid": "6ac40411e96abf315fb2d160"}, "username": "disciplina", "password": "$2a$10$Zq5hwGT9JOWC8W/35hZHceU02wUJrO1M.ztKQOyOvZH15nPUMUUZm", "rol": "DISCIPLINA", "nombreCompleto": "Coordinador de Disciplina", "email": "williamcamilobn7@gmail.com", "_class": "com.colegio.entity.Usuario"}
+{"_id": {"$oid": "6ac40412e96abf315fb2d161"}, "username": "docente", "password": "$2a$10$93wmvWDUgWwVdV.kJv7ukuEGN4RppDqTNbv4cwXXyf/eqCcxOzml6", "rol": "DOCENTE", "nombreCompleto": "Docente Demo", "_class": "com.colegio.entity.Usuario"}
+{"_id": {"$oid": "6ac40412e96abf315fb2d162"}, "username": "rector", "password": "$2a$10$EAidlxGUlZCIE4HjCd1vWO.OG0GX8/PNHPKJg5.nccZodkBXBoJ3q", "rol": "RECTOR", "nombreCompleto": "Ana Maria Rojas", "_class": "com.colegio.entity.Usuario"}

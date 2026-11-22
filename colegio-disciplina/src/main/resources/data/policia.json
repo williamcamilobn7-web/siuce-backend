@@ -1,0 +1,1 @@
+{"_id": {"$oid": "6ac40411e96abf315fb2d15f"}, "nombre": "Policia de Infancia y Adolescencia", "estacion": "Estacion Centro", "telefonoEmergencia": "156", "latitud": 10.4236, "longitud": -75.547, "_class": "com.colegio.entity.Policia"}

@@ -1,0 +1,1 @@
+{"_id": {"$oid": "6ac40411e96abf315fb2d15e"}, "nombre": "EPS Sanitas", "telefono": "6041234567", "direccion": "Calle 30 No 15-20, Cartagena", "latitud": 10.4, "longitud": -75.51, "_class": "com.colegio.entity.EntidadSalud"}
