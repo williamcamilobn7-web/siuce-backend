@@ -64,7 +64,7 @@ public class SecurityConfig {
                 // Orden de las reglas: lo público primero y al final "cualquier otra cosa se bloquea"
                 // Público
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/login-estudiante").permitAll()
-                .requestMatchers("/", "/index.html", "/*.js", "/*.css").permitAll()
+                .requestMatchers("/", "/index.html", "/*.js", "/*.css", "/error/**").permitAll()
                 // /error: para que los errores reales lleguen al cliente y no como un 401 mudo
                 .requestMatchers("/error").permitAll()
                 // Rutas del inicio de sesión con Google/GitHub (las atiende Spring Security)

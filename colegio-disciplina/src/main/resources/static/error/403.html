@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>403 - Permisos Insuficientes | SIUCE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Lora:wght@500;600&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+            --bg-color: #0f1f35;
+            --card-bg: #162844;
+            --border-color: #243d5e;
+            --accent: #2f80ed;
+            --accent-hover: #1a6ed4;
+            --text-main: #f0ece4;
+            --text-muted: #8fa4be;
+            --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: radial-gradient(circle at 50% 20%, #162b48 0%, var(--bg-color) 80%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .error-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 40px 32px;
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .badge-code {
+            display: inline-block;
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+        .icon {
+            font-size: 54px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-family: 'Lora', serif;
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+        p {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+        .info-box {
+            background: rgba(15, 31, 53, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 28px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: left;
+        }
+        .info-box span {
+            color: #fff;
+            font-weight: 500;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border-color: var(--border-color);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+        .brand {
+            margin-top: 28px;
+            font-size: 12px;
+            color: #5a7494;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="icon">🚫</div>
+        <div class="badge-code">ERROR 403 · ACCESO DENEGADO</div>
+        <h1>Permisos Insuficientes</h1>
+        <p>Tu usuario actual no tiene los privilegios necesarios para acceder a este recurso. Esta acción está restringida según tu rol institucional asignado.</p>
+        
+        <div class="info-box">
+            🛡️ <span>Control de Acceso (RBAC):</span> Determinadas operaciones (como carga masiva, edición de usuarios o firma de expedientes) requieren roles autorizados como DISCIPLINA o RECTOR.
+        </div>
+
+        <div class="actions">
+            <a href="/" class="btn btn-primary">Ir al Inicio</a>
+            <a href="javascript:history.back()" class="btn btn-secondary">Regresar</a>
+        </div>
+
+        <div class="brand">⚖ SIUCE Bridge · Sistema de Gestión Disciplinaria</div>
+    </div>
+</body>
+</html>
