@@ -143,9 +143,15 @@
         </div>
 
         <div class="actions">
-            <a href="/" class="btn btn-primary">Iniciar Sesión</a>
+            <a href="https://siuce-frontend.onrender.com" id="btnInicio" class="btn btn-primary">Iniciar Sesión</a>
             <a href="javascript:history.back()" class="btn btn-secondary">Regresar</a>
         </div>
+        <script>
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                const b = document.getElementById('btnInicio');
+                if (b) b.href = 'http://localhost:4200';
+            }
+        </script>
 
         <div class="brand">⚖ SIUCE Bridge · Sistema de Gestión Disciplinaria</div>
     </div>
